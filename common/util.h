@@ -22,11 +22,11 @@
 
 namespace util {
 
-#define SIZE_TINY_BLAH				(0x40)
-#define SIZE_MID_BLAH 				(0x200)
+#define SIZE_TINY_BLAH              (0x40)
+#define SIZE_MID_BLAH               (0x200)
 
-#define SUCC						(0)
-#define FAIL						(1)
+#define SUCC                        (0)
+#define FAIL                        (1)
 
 #define ERROR(...)      SpewMsg(__FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define LOG(...)        SpewMsg(__VA_ARGS__)
