@@ -22,6 +22,7 @@ void EggHunter::WaitForForkEvent(pid_t pid)
             // Capture the fork event and record the app PID.
             if (ptrace(PTRACE_GETEVENTMSG, pid, NULL, &pid_app_) == -1)
                 LOG_SYSERR_AND_THROW()
+
             if (ptrace(PTRACE_CONT, pid, NULL, NULL) == -1)
                 LOG_SYSERR_AND_THROW()
             break;
@@ -29,7 +30,36 @@ void EggHunter::WaitForForkEvent(pid_t pid)
     }
 }
 
-int32_t EggHunter::CaptureApp(pid_t pid_zygote)
+void EggHunter::CheckStartupCmd(char* sz_app)
+{
+    // Wait for the new process to finish app initialization.
+    while (true) {
+        int32_t status;
+        if (waitpid(pid_app_, &status, __WALL) != pid_app_)
+            LOG_SYSERR_AND_THROW()
+
+        // Force the newly forked process to stop at each system call entry or
+        // the code points just after system call. So that we can capture the
+        // timing about finishing initialization.
+        if (ptrace(PTRACE_SYSCALL, pid_app_, NULL, NULL) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        char buf[SIZE_MID_BLAH];
+        sprintf(buf, "/proc/%d/cmdline", pid_app_);
+        int fd = open(buf, O_RDONLY);
+        if (fd < 0)
+            continue;
+        read(fd, buf, sizeof(char) * SIZE_MID_BLAH);
+        close(fd);
+
+        if (strstr(buf, sz_app)) {
+            LOG("[+] Capture the target app %d -> %s\n", pid_app_, buf);
+            break;
+        }
+    }
+}
+
+int32_t EggHunter::CaptureApp(pid_t pid_zygote, char* sz_app)
 {
     int32_t rtn = SUCC;
 
@@ -57,10 +87,8 @@ int32_t EggHunter::CaptureApp(pid_t pid_zygote)
          * newly forked app is our target by examining the startup command. If *
          * so, we successfully get the goal and should release zygote.         *
          *---------------------------------------------------------------------*/
-        while (true) {
-            WaitForForkEvent(pid_zygote);
-            LOG("[+] Child PID: %d\n", pid_app_);
-        }
+        WaitForForkEvent(pid_zygote);
+        CheckStartupCmd(sz_app);
     } catch (bad_probe& e) {
         rtn = FAIL;
         if (pid_app_ != 0)
@@ -71,9 +99,9 @@ int32_t EggHunter::CaptureApp(pid_t pid_zygote)
     return rtn;
 }
 
-int32_t EggHunter::Hunt(pid_t pid_zygote)
+int32_t EggHunter::Hunt(pid_t pid_zygote, char* sz_app)
 {
-    if (CaptureApp(pid_zygote) != SUCC)
+    if (CaptureApp(pid_zygote, sz_app) != SUCC)
         return FAIL;
 
     return SUCC;

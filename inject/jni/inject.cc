@@ -61,7 +61,7 @@ int32_t main(int32_t argc, char** argv)
 
     // Start to inject the designated shared object.
     proc::EggHunter hunter;
-    hunter.Hunt(pid_zygote);
+    hunter.Hunt(pid_zygote, sz_app);
 
     return SUCC;
 }

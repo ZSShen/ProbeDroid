@@ -36,9 +36,10 @@ class EggHunter
     pid_t pid_app_;
     FunctionTable func_tbl_;
 
-    int32_t CaptureApp(pid_t);
+    int32_t CaptureApp(pid_t, char*);
     int32_t InjectApp();
     void WaitForForkEvent(pid_t);
+    void CheckStartupCmd(char*);
 
   public:
     EggHunter()
@@ -48,7 +49,7 @@ class EggHunter
     ~EggHunter()
     {}
 
-    int32_t Hunt(pid_t);
+    int32_t Hunt(pid_t, char*);
 };
 
 }
