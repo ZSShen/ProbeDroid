@@ -46,12 +46,9 @@ void EggHunter::CheckStartupCmd(char* sz_app)
 
         char buf[SIZE_MID_BLAH];
         sprintf(buf, "/proc/%d/cmdline", pid_app_);
-        int fd = open(buf, O_RDONLY);
-        if (fd < 0)
-            continue;
-        read(fd, buf, sizeof(char) * SIZE_MID_BLAH);
-        close(fd);
-
+        std::ifstream cmd(buf, std::ifstream::in);
+        if (cmd.good())
+            cmd.getline(buf, SIZE_MID_BLAH);
         if (strstr(buf, sz_app)) {
             LOG("[+] Capture the target app %d -> %s\n", pid_app_, buf);
             break;

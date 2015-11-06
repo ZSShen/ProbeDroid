@@ -2,6 +2,7 @@
 #define _UTIL_H_
 
 #include <iostream>
+#include <fstream>
 #include <cstdio>
 #include <cstdint>
 #include <cstdarg>
