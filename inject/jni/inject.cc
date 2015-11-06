@@ -1,8 +1,8 @@
 #include <util.h>
+#include <proc.h>
 
 
 using namespace util;
-
 
 #define OPT_LONG_ZYGOTE             "zygote"
 #define OPT_LONG_APPNAME            "app"
@@ -24,7 +24,7 @@ void PrintUsage()
 
 int32_t main(int32_t argc, char** argv)
 {
-    /* Acquire the command line arguments. */
+    // Acquire the command line arguments.
     static struct option opts[] = {
         {OPT_LONG_APPNAME, required_argument, 0, OPT_APPNAME},
         {OPT_LONG_LIBPATH, required_argument, 0, OPT_LIBPATH},
@@ -58,6 +58,10 @@ int32_t main(int32_t argc, char** argv)
         PrintUsage();
         return FAIL;
     }
+
+    // Start to inject the designated shared object.
+    proc::EggHunter hunter;
+    hunter.Hunt(pid_zygote);
 
     return SUCC;
 }

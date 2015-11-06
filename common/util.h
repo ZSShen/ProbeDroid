@@ -34,6 +34,16 @@ namespace util {
 void SpewMsg(const char*, const char*, const int, const char*, ...);
 void SpewMsg(const char*, ...);
 
+
+class bad_probe : public std::exception
+{
+  public:
+    const char* what() const throw ()
+    {
+        return "Fail to interact with the probed process.";
+    }
+};
+
 }
 
 #endif
