@@ -10,6 +10,7 @@ using namespace util;
 #define FUNC_DLOPEN             "dlopen"
 #define FUNC_MMAP               "mmap"
 #define PERM_READ_EXEC          "r-xp"
+#define SIZE_SEGMENT            0x1000
 
 #define LOG_SYSERR_AND_THROW()                                                 \
         do {                                                                   \
@@ -82,7 +83,6 @@ int32_t FunctionTable::Resolve(pid_t pid_me, pid_t pid_him)
         return FAIL;
     mmap_ = addr_libc_him + (addr_mmap_me - addr_libc_me);
 
-    std::cout << mmap_ << " " << dlopen_ << std::endl;
     return SUCC;
 }
 
@@ -126,10 +126,38 @@ void EggHunter::CheckStartupCmd(const char* sz_app)
         if (cmd.good())
             cmd.getline(buf, SIZE_MID_BLAH);
         if (strstr(buf, sz_app)) {
-            LOG("[+] Capture the target app %d -> %s\n", pid_app_, buf);
+            LOG("[+] Capture the target app %s(%d)", buf, pid_app_);
             break;
         }
     }
+}
+
+int32_t EggHunter::PokeTextInApp(uint32_t addr_txt, const char* buf, int32_t count_byte)
+{
+    int32_t count_wrt = 0;
+    while (count_wrt < count_byte) {
+        int32_t word;
+        memcpy(&word, buf + count_wrt, sizeof(word));
+        if (ptrace(PTRACE_POKETEXT, pid_app_, addr_txt + count_wrt, word) == -1)
+            return FAIL;
+        count_wrt += sizeof(word);
+    }
+    return SUCC;
+}
+
+int32_t EggHunter::PeekTextInApp(uint32_t addr_txt, char* buf, int32_t count_byte)
+{
+    // Expect type coercion. But better approach is needed.
+    int32_t* slide = (int32_t*)buf;
+    int32_t count_read = 0, idx = -1;
+    while (count_read < count_byte) {
+        int32_t word = ptrace(PTRACE_PEEKTEXT, pid_app_, addr_txt + count_read, NULL);
+        if (word == -1)
+            return FAIL;
+        count_read += sizeof(word);
+        slide[++idx] = word;
+    }
+    return SUCC;
 }
 
 int32_t EggHunter::CaptureApp(pid_t pid_zygote, const char* sz_app)
@@ -178,6 +206,123 @@ int32_t EggHunter::InjectApp(const char* sz_path)
     if (func_tbl_.Resolve(pid_inject, pid_app_) != SUCC)
         return FAIL;
 
+    // Prepare the library pathname. zero padding is necessary to produce
+    // the text word applied by ptrace().
+    char payload[SIZE_MID_BLAH];
+    int32_t len_payload = strlen(sz_path);
+    strncpy(payload, sz_path, len_payload);
+    payload[len_payload++] = 0;
+
+    div_t count_word = div(len_payload, sizeof(uint32_t));
+    int32_t patch = (count_word.rem > 0)? (sizeof(uint32_t) - count_word.rem) : 0;
+    for (int i = 0 ; i < patch ; ++i)
+        payload[len_payload++] = 0;
+
+    // Prepare the addresses of mmap() and dlopen() of the target app.
+    uint32_t addr_mmap = func_tbl_.GetMmap();
+    uint32_t addr_dlopen = func_tbl_.GetDlopen();
+
+    int32_t rtn = SUCC;
+    try {
+        // Backup the context of the target app.
+        struct user_regs_struct reg_orig;
+        if (ptrace(PTRACE_GETREGS, pid_app_, NULL, &reg_orig) == -1)
+            LOG_SYSERR_AND_THROW();
+
+        /*
+         * First, we force the target app to execute mmap(). The allocated
+         * block will be stuffed with the pathname of the hooking library.
+         * Note, to fit the calling convention,
+         * param[0] stores the return address, and
+         * param[6] to param[1] is the actual parameters of mmap().
+         */
+        int32_t param[SIZE_TINY_BLAH];
+        param[0] = 0;
+        param[1] = 0;
+        param[2] = SIZE_SEGMENT;
+        param[3] = PROT_READ | PROT_WRITE | PROT_EXEC;
+        param[4] = MAP_ANONYMOUS | MAP_PRIVATE;
+        param[5] = 0;
+        param[6] = 0;
+        int32_t count_byte = sizeof(uint32_t) * 7;
+
+        struct user_regs_struct reg_modi;
+        memcpy(&reg_modi, &reg_orig, sizeof(struct user_regs_struct));
+        reg_modi.eip = addr_mmap;
+        reg_modi.esp -= count_byte;
+
+        // Expect type coercion. But better approach is needed.
+        if (PokeTextInApp(reg_modi.esp, (char*)param, count_byte) != SUCC)
+            LOG_SYSERR_AND_THROW()
+
+        if (ptrace(PTRACE_SETREGS, pid_app_, NULL, &reg_modi) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        if (ptrace(PTRACE_CONT, pid_app_, NULL, NULL) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        // The injector will receive a SIGSEGV triggered by target app due to
+        // invalid return address.
+        int32_t status;
+        if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
+            LOG_SYSERR_AND_THROW()
+
+        // Stuff the pathname of the hooking library into the newly mapped
+        // memory block.
+        if (ptrace(PTRACE_GETREGS, pid_app_, NULL, &reg_modi) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        uint32_t addr_blk = reg_modi.eax;
+        LOG("[+] mmap() successes with %x returned", addr_blk);
+
+        if (PokeTextInApp(addr_blk, payload, len_payload) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        /*
+         * Second, we force the target app to execute dlopen(). Then our hooking
+         * library will be loaded by target.
+         * Note, to fit the calling convention,
+         * param[0] stores the return address, and
+         * param[2] to param[1] is the actual parameters of dlopen().
+         */
+        param[0] = 0;
+        param[1] = addr_blk;
+        param[2] = RTLD_LAZY;
+        count_byte = sizeof(uint32_t) * 3;
+
+        reg_modi.eip = addr_dlopen;
+        reg_modi.esp -= count_byte;
+
+        // Expect type coercion. But better approach is needed.
+        if (PokeTextInApp(reg_modi.esp, (char*)param, count_byte) != SUCC)
+            LOG_SYSERR_AND_THROW()
+
+        if (ptrace(PTRACE_SETREGS, pid_app_, NULL, &reg_modi) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        if (ptrace(PTRACE_CONT, pid_app_, NULL, NULL) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        // The injector will receive a SIGSEGV triggered by target app due to
+        // invalid return address.
+        if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
+            LOG_SYSERR_AND_THROW()
+        LOG("[+] dlopen() successes");
+
+        // At this stage, we finish the library injection and should restore
+        // the context of the target app.
+        if (ptrace(PTRACE_SETREGS, pid_app_, NULL, &reg_orig) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        if (ptrace(PTRACE_CONT, pid_app_, NULL, NULL) == -1)
+            LOG_SYSERR_AND_THROW()
+    } catch (BadProbe& e) {
+        rtn = FAIL;
+        if (pid_app_ != 0)
+            ptrace(PTRACE_DETACH, pid_app_, NULL, NULL);
+    }
+
+    ptrace(PTRACE_DETACH, pid_app_, NULL, NULL);
     return SUCC;
 }
 
@@ -185,10 +330,8 @@ int32_t EggHunter::Hunt(pid_t pid_zygote, const char* sz_app, const char* sz_pat
 {
     if (CaptureApp(pid_zygote, sz_app) != SUCC)
         return FAIL;
-
     if (InjectApp(sz_path) != SUCC)
         return FAIL;
-
     return SUCC;
 }
 

@@ -48,6 +48,8 @@ class EggHunter
     int32_t InjectApp(const char*);
     void WaitForForkEvent(pid_t);
     void CheckStartupCmd(const char*);
+    int32_t PokeTextInApp(uint32_t, const char*, int32_t);
+    int32_t PeekTextInApp(uint32_t, char*, int32_t);
 
   public:
     EggHunter()
