@@ -21,7 +21,7 @@ namespace util {
             } while (0);
 
 
-void SpewMsg(const char* file, const char* func, const int line,
+void SpewMsg(const char* file, const char* func, const int32_t line,
              const char* format, ...)
 {
     char buf[SIZE_MID_BLAH];

@@ -11,23 +11,31 @@ class EggHunter;
 class FunctionTable
 {
   private:
-    void* dlopen_;
-    void* mmap_;
+    uint32_t dlopen_;
+    uint32_t mmap_;
 
-    void* GetLibBgnAddr(pid_t);
-    void* GetFuncBgnAddr(const char*, const char*);
+    uint32_t GetLibBgnAddr(pid_t, const char*);
+    uint32_t GetFuncBgnAddr(const char*, const char*);
 
   public:
     FunctionTable()
-      : dlopen_(NULL), mmap_(NULL)
+      : dlopen_(0), mmap_(0)
     {}
 
     ~FunctionTable()
     {}
 
-    void Resolve(pid_t, pid_t);
-    void* GetDlopen() const;
-    void* GetMmap() const;
+    int32_t Resolve(pid_t, pid_t);
+
+    uint32_t GetDlopen() const
+    {
+        return dlopen_;
+    }
+
+    uint32_t GetMmap() const
+    {
+        return mmap_;
+    }
 };
 
 class EggHunter
@@ -36,10 +44,10 @@ class EggHunter
     pid_t pid_app_;
     FunctionTable func_tbl_;
 
-    int32_t CaptureApp(pid_t, char*);
-    int32_t InjectApp();
+    int32_t CaptureApp(pid_t, const char*);
+    int32_t InjectApp(const char*);
     void WaitForForkEvent(pid_t);
-    void CheckStartupCmd(char*);
+    void CheckStartupCmd(const char*);
 
   public:
     EggHunter()
@@ -49,7 +57,7 @@ class EggHunter
     ~EggHunter()
     {}
 
-    int32_t Hunt(pid_t, char*);
+    int32_t Hunt(pid_t, const char*, const char*);
 };
 
 }

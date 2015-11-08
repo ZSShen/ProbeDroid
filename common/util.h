@@ -32,16 +32,50 @@ namespace util {
 #define ERROR(...)      SpewMsg(__FILE__, __FUNCTION__, __LINE__, __VA_ARGS__)
 #define LOG(...)        SpewMsg(__VA_ARGS__)
 
-void SpewMsg(const char*, const char*, const int, const char*, ...);
+void SpewMsg(const char*, const char*, const int32_t, const char*, ...);
 void SpewMsg(const char*, ...);
 
 
-class bad_probe : public std::exception
+class BadProbe : public std::exception
 {
   public:
     const char* what() const throw ()
     {
         return "Fail to interact with the probed process.";
+    }
+};
+
+class BadSharedObject : public std::exception
+{
+  public:
+    const char* what() const throw()
+    {
+        return "Fail to load the designated shared object.";
+    }
+};
+
+class DlHandle
+{
+  private:
+    void* handle_;
+
+  public:
+    DlHandle(const char* sz_path, int32_t flag)
+    {
+        handle_ = dlopen(sz_path, flag);
+        if (!handle_)
+            throw BadSharedObject();
+    }
+
+    uint32_t ResolveSymbol(const char* symbol)
+    {
+        // Expect type coercion. But better approach is needed.
+        return (uint32_t)dlsym(handle_, symbol);
+    }
+
+    ~DlHandle()
+    {
+        dlclose(handle_);
     }
 };
 

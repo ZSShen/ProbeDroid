@@ -36,7 +36,7 @@ int32_t main(int32_t argc, char** argv)
 
     int32_t opt, idx_opt;
     pid_t pid_zygote = 0;
-    char *sz_app = NULL, *path_lib = NULL;
+    char *sz_app = NULL, *sz_path = NULL;
     while ((opt = getopt_long(argc, argv, sz_order, opts, &idx_opt)) != -1) {
         switch (opt) {
             case OPT_ZYGOTE:
@@ -46,7 +46,7 @@ int32_t main(int32_t argc, char** argv)
                 sz_app = optarg;
                 break;
             case OPT_LIBPATH:
-                path_lib = optarg;
+                sz_path = optarg;
                 break;
             default:
                 PrintUsage();
@@ -54,14 +54,14 @@ int32_t main(int32_t argc, char** argv)
         }
     }
 
-    if (pid_zygote == 0 || !sz_app || !path_lib) {
+    if (pid_zygote == 0 || !sz_app || !sz_path) {
         PrintUsage();
         return FAIL;
     }
 
     // Start to inject the designated shared object.
     proc::EggHunter hunter;
-    hunter.Hunt(pid_zygote, sz_app);
+    hunter.Hunt(pid_zygote, sz_app, sz_path);
 
     return SUCC;
 }
