@@ -100,6 +100,10 @@ void EggHunter::WaitForForkEvent(pid_t pid)
 
             if (ptrace(PTRACE_CONT, pid, NULL, NULL) == -1)
                 LOG_SYSERR_AND_THROW()
+
+            int32_t status;
+            if (waitpid(pid_app_, &status, __WALL) != pid_app_)
+                LOG_SYSERR_AND_THROW()
             break;
         }
     }
@@ -109,14 +113,14 @@ void EggHunter::CheckStartupCmd(const char* sz_app)
 {
     // Wait for the new process to finish app initialization.
     while (true) {
-        int32_t status;
-        if (waitpid(pid_app_, &status, __WALL) != pid_app_)
-            LOG_SYSERR_AND_THROW()
-
         // Force the newly forked process to stop at each system call entry or
         // the code points just after system call. So that we can capture the
         // timing about finishing initialization.
         if (ptrace(PTRACE_SYSCALL, pid_app_, NULL, NULL) == -1)
+            LOG_SYSERR_AND_THROW()
+
+        int32_t status;
+        if (waitpid(pid_app_, &status, __WALL) != pid_app_)
             LOG_SYSERR_AND_THROW()
 
         char buf[SIZE_MID_BLAH];
