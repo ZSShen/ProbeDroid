@@ -79,7 +79,7 @@ The usage of the injector is listed below:
 ```  
 
 You can acquire the zygote PID by `ps` command.  
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Zybote.png"/>  
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Zygote.png"/>  
 And for the Google maps example, the complete command should like this:  
 ```sh
 $ ./inject -z 936 -a maps -l /PATH_TO_WORK/libhook.so
