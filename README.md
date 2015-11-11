@@ -79,26 +79,26 @@ The usage of the injector is listed below:
 ```  
 
 You can acquire the zygote PID by `ps` command.  
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Zygote.png"/>  
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Zygote.png" width="450px"/>  
 And for the Google maps example, the complete command should like this:  
 ```sh
 $ ./inject -z 936 -a maps -l /PATH_TO_WORK/libhook.so
 ```  
 
 If the command finishes successfully, you should see the result like:  
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Command Execution.png"/>  
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Command Execution.png" width="450px"/>  
 
 You can verify the successful library injection by checking the process memory layout:  
 ```sh
 $ cat /proc/PID/maps
 ```
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Proc Map.png"/>  
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Proc Map.png" width="750px"/>  
 
 Also, the system log can help you extract the debug message printed by the constructor of the library:  
 ```sh
 $ logcat -v time -f /dev/kmsg | cat /proc/kmsg
 ```  
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Library Launch.png"/>  
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Library Launch.png" width="750px"/>  
 
 
 ###Epilogue
