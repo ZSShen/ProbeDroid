@@ -76,13 +76,14 @@ Seems like a laborious manual effort? Do not worry! The injector already handles
 The usage of the injector is listed below:  
 ```
 ./inject -z ZYGOTE_PID -a APP_PKG_KEYWORD -l /PATH_TO_WORK/libhook.so
-```
+```  
+
 You can acquire the zygote PID by `ps` command.  
 <img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Zybote.png"/>  
 And for the Google maps example, the complete command should like this:  
 ```sh
 $ ./inject -z 936 -a maps -l /PATH_TO_WORK/libhook.so
-```
+```  
 
 If the command finishes successfully, you should see the result like:  
 <img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Command Execution.png"/>  
@@ -90,19 +91,20 @@ If the command finishes successfully, you should see the result like:
 You can verify the successful library injection by checking the process memory layout:  
 ```sh
 $ cat /proc/PID/maps
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Proc Map.png"/>  
 ```
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Proc Map.png"/>  
 
-Also, the system log can help you to extract the debug message printed by the constructor of the library:
+Also, the system log can help you extract the debug message printed by the constructor of the library:  
 ```sh
 $ logcat -v time -f /dev/kmsg | cat /proc/kmsg
-```
+```  
 <img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Library Launch.png"/>  
-```
 
-OK, that's down! 
-If you have any questions, please contact me via this mail:
-andy.zsshen@gmail.com
+
+###Epilogue
+If you have any questions, please contact me via the mail: andy.zsshen@gmail.com  
+But please note that the hooking library is now under construction.  
+I will update it soon. :)  
 
 [Android SDK]:https://developer.android.com/sdk/index.html#Other
 [Android NDK]:http://developer.android.com/ndk/downloads/index.html
