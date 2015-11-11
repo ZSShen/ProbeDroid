@@ -15,7 +15,7 @@ Suppose that:
 - The absolute path storing DroidProf in your host machine is `PATH_TO_DROIDPROF` .  
 - The working directory in your AVD is `PATH_TO_WORK`.  
  
-####For injector 
+#####For injector 
 Firstly, we switch to `PATH_TO_DROIDPROF/inject/jni` to build the executable:  
 ```sh
 $ ndk-build
@@ -26,12 +26,12 @@ Secondly, we push the executable into AVD:
 ```sh
 $ adb push PATH_TO_DROID_PROF/inject/libs/x86/inject PATH_TO_WORK/
 ```
-And change its access permission:
+And in the AVD, change the access permission of injector:
 ```sh
 $ chmod a+x PATH_TO_WORK/inject
 ```
 
-####For hooking library  
+#####For hooking library  
 Firstly, we switch to `PATH_TO_DROIDPROF/payload/jni` to build the library:  
 ```sh
 $ ndk-build
@@ -42,9 +42,27 @@ Secondly, we push the library into AVD:
 ```sh
 $ adb push PATH_TO_DROID_PROF/payload/libs/x86/libhook.so PATH_TO_WORK/
 ```
-And change its access permission:
+And in the AVD, change the access permission of hooking library:
 ```sh
 $ chmod a+x PATH_TO_WORK/libhook.so
+```
+
+###Usage  
+##### Preprocess before Experiment  
+Firstly, ***current Android enforces SELinux mandatory access control***. To force an arbitrary application load and execute our hooking library, we must temporarily turn off the access control. Note that ***we can only switch SELinux to advisory mode (Warning but Non-Blocking) instead of complete shutdown mode***.  
+For this, in your AVD, just type:  
+```sh
+$ su 0 setenforce 0
+```
+Secondly, some applications may install background services which will be  automatically triggered by certain Intent messages. ***To ensure the clean experiment and correct library injection on your target application, you have to shutdown its relevant service processes before running toolkit***.  
+Suppose your target app is google maps, then you can try the following steps:  
+```
+$ ps
+```
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Google Maps.png Intro.png"/>  
+Find the PID of google maps and kill it.  
+```sh
+$ kill PID
 ```
 
 
