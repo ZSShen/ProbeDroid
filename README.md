@@ -59,7 +59,7 @@ Suppose your target app is google maps, then you can try the following steps:
 ```
 $ ps
 ```
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Google Maps.png Intro.png"/>  
+<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Google Maps.png"/>  
 Find the PID of google maps and kill it.  
 ```sh
 $ kill PID
