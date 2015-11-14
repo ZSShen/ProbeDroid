@@ -1,5 +1,6 @@
 #include <proc.h>
 
+
 namespace proc {
 
 using namespace util;
@@ -291,7 +292,7 @@ int32_t EggHunter::InjectApp(const char* sz_path)
          */
         param[0] = 0;
         param[1] = addr_blk;
-        param[2] = RTLD_LAZY;
+        param[2] = RTLD_NOW;
         count_byte = sizeof(uint32_t) * 3;
 
         reg_modi.eip = addr_dlopen;
