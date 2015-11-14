@@ -87,12 +87,13 @@ InvokeVirtualFake:
 .global ResolveStringFake
 .type ResolveStringFake, @function
 ResolveStringFake:
-    # Now it is just a trial to prove that we really hook the original function.
-    # The target app will crash if it attempts to resolve the string in
-    # Dalvik cache.
+    # Now it is just a dummy hook.
     pusha
     pushf
     call ResolveStringProfiling
     popf
     popa
+
+    call *ResolveStringOriginal
+
     ret

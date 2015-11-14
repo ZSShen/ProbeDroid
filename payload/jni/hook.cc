@@ -22,5 +22,6 @@ void __attribute__((constructor)) entry()
 
 void ResolveStringProfiling()
 {
+    // Now it is just a dummy hook to verify our successful hook.
     LOGD("\n\n\n[+] Calling ResolveString() during native execution\n\n\n");
 }
