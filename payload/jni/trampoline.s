@@ -90,7 +90,11 @@ ResolveStringFake:
     # Now it is just a dummy hook.
     pusha
     pushf
+    subl $8, %esp
+    movl %ecx, 0(%esp)
+    movl %eax, 4(%esp)
     call ResolveStringProfiling
+    addl $8, %esp
     popf
     popa
 
