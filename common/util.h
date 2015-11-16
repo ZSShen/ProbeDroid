@@ -20,6 +20,8 @@
 #include <sys/stat.h>
 #include <sys/user.h>
 #include <sys/mman.h>
+#include <android/log.h>
+
 
 namespace util {
 
