@@ -5,6 +5,8 @@
 .equ TLS_OFST_QUICK_INVOKE_VIRTUAL, 0x22c
 .equ TLS_OFST_QUICK_RESOLVE_STRING, 0x150
 
+.equ TLS_OFST_JNIENVEXT, 0x98
+
 
 #--------------------------------------------------------------------------#
 #                   Linkage with Cpp Site Global Bariable                  #
@@ -12,6 +14,7 @@
 .global InvokeVirtualOriginal
 .global ResolveStringOriginal
 .global ResolveStringProfiling
+.global VirtualMethodCallProfiling
 
 
 #--------------------------------------------------------------------------#
@@ -101,3 +104,39 @@ ResolveStringFake:
     call *ResolveStringOriginal
 
     ret
+
+
+.global GetJNIENVExt
+.type GetJNIENVExt, @function
+GetJNIENVExt:
+    # Prologue for saving context.
+    push %ebp
+    movl %esp, %ebp
+    pusha
+    pushf
+
+    movl 8(%ebp), %esi
+    movl %fs:TLS_OFST_JNIENVEXT, %eax
+    movl %eax, (%esi)
+
+    # Epilogue for restoring context.
+    popf
+    popa
+    leave
+    ret
+
+
+.global VirtualMethodCallFake
+.type VirtualMethodCallFake, @function
+VirtualMethodCallFake:
+    # Now it is just a dummy hook.
+    pusha
+    pushf
+    call VirtualMethodCallProfiling
+    popf
+    popa
+
+    call *VirtualMethodCallOriginal
+
+    ret
+
