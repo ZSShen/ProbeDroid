@@ -552,8 +552,10 @@ class Runtime {
 
   InternTable* intern_table_;
 
+public:
   ClassLinker* class_linker_;
 
+private:
   SignalCatcher* signal_catcher_;
   std::string stack_trace_file_;
 

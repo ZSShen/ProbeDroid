@@ -3,7 +3,6 @@
 
 #include <util.h>
 #include <jni.h>
-#include <jni_internal.h>
 
 
 typedef void (*FUNC_INVOKE_VIRTUAL) (uint32_t, void*);

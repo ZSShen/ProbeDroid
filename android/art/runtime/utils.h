@@ -34,6 +34,11 @@
 #include "cutils/properties.h"
 #endif
 
+/*
+  Modified Part:
+    1. The template function ParseUint() and ParseInt() are commented.
+ */
+
 namespace art {
 
 class DexFile;
@@ -53,6 +58,7 @@ enum TimeUnit {
   kTimeUnitSecond,
 };
 
+/*
 template <typename T>
 bool ParseUint(const char *in, T* out) {
   char* end;
@@ -66,7 +72,9 @@ bool ParseUint(const char *in, T* out) {
   *out = static_cast<T>(result);
   return true;
 }
+*/
 
+/*
 template <typename T>
 bool ParseInt(const char* in, T* out) {
   char* end;
@@ -80,6 +88,7 @@ bool ParseInt(const char* in, T* out) {
   *out = static_cast<T>(result);
   return true;
 }
+*/
 
 template<typename T>
 static constexpr bool IsPowerOfTwo(T x) {
