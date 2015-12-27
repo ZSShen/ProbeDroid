@@ -14,6 +14,7 @@ class String : public Object
   public:
     static int32_t GetLength(const String*);
     static const Array* GetCharArray(const String*);
+    static std::string ToModifiedUtf8(const String*);
 
     friend int32_t GetLength(const String*);
     friend const Array* GetCharArray(const String*);
