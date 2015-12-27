@@ -12,7 +12,6 @@ class Object
 {
   private:
     // The class representing the type of the object.
-    // We just simplify the heap reference object to an address.
     uint32_t heapref_class_;
 
     // Monitor and hash code information.
