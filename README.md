@@ -1,7 +1,7 @@
 ##DroidProf
 
 ##Prologue 
-A dynamic binary instrumentation toolkit for application profiling targeting on Android(L) 5.0 and above. Hopefully, it will fly. But it is now under the POC construction. In more detail, ***shared library injection*** is the fundamental technique to support this toolkit. To profile the given application, a component of this toolkit called **injector** will inject a **hooking library** into the target. The library will hook several functions which interact with the Java class fields and methods of an application, and thus accomplish the goal for behavior profiling. ***In the current stage, I just finish the injector, and the hooking library is now under way***.  Besides, a primary restriction is that the toolkit is now focusing on Intel x86 architecture.
+A dynamic binary instrumentation toolkit for application profiling targeting on Android(L) 5.0. Hopefully, it will fly. But it is now under the POC construction. In more detail, ***shared library injection*** is the fundamental technique to support this toolkit. To profile the given application, a component of this toolkit called **injector** will inject a **hooking library** into the target. The library will hook several functions which interact with the Java class fields and methods of an application, and thus accomplish the goal for behavior profiling. ***In the current stage, I just finish the injector, and the hooking library is now under way***.  Besides, a primary restriction is that the toolkit is now focusing on Intel x86 architecture.
 
 ##Prerequisite 
 We need the fundamental Android toolchain:  
@@ -100,6 +100,17 @@ $ logcat -v time -f /dev/kmsg | cat /proc/kmsg
 ```  
 <img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Library Launch.png" width="750px"/>  
 
+
+### Current Progress  
++ Done Triage  
+  + Hook several Java APIs like StringBuilder.toString() and String.indexOf(String,int). The relevant parsing for parameters and return value is done.  
+ 
++ To Do List 
+  + Plan for more Java utility APIs and Android sensitive APIs.  
+  + Plan for HTML formatted analysis report.
+
++ Future Work
+  + Currently, the project focuses on recording the API input/output. Other kinds of instrumentation application will be planed when the system becomes stable.  
 
 ###Epilogue
 If you have any questions, please contact me via the mail: andy.zsshen@gmail.com  
