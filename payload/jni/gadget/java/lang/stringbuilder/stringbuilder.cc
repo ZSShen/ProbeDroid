@@ -1,6 +1,6 @@
 
 #include "logcat.h"
-#include "stringbuilder.h"
+#include "../stringbuilder.h"
 
 
 using namespace art;
@@ -16,7 +16,7 @@ void toStringPostCall(void* objref)
 {
     const String* str = reinterpret_cast<const String*>(objref);
     std::string content = String::ToModifiedUtf8(str);
-    LOGD("[+] %s\n", content.c_str());
+    LOGD("[+] StringBuilder.toString() ret=%s\n", content.c_str());
 }
 
 bool Gadget_java_lang_StringBuilder::toStringPatcher(JNIEnv* env)

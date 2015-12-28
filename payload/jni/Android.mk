@@ -8,11 +8,10 @@ LOCAL_C_INCLUDES        +=  ../../common \
                             ../../android/art/runtime \
                             ./gadget
 
-LOCAL_SRC_FILES         :=  ../../common/util.cc \
-                            ../../common/utf.cc \
+LOCAL_SRC_FILES         :=  ../../common/utf.cc \
                             ../../android/art/runtime/mirror/string.cc \
-                            ./gadget/java/lang/stringbuilder-asm.s \
-                            ./gadget/java/lang/stringbuilder.cc \
+                            ./gadget/java/lang/stringbuilder/stringbuilder-asm.s \
+                            ./gadget/java/lang/stringbuilder/stringbuilder.cc \
                             ./gadget/gadget-asm.s \
                             hook.cc \
 
