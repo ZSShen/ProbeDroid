@@ -1,21 +1,34 @@
 #ifndef _PROC_H_
 #define _PROC_H_
 
-#include <util.h>
+
+#include "globals.h"
+#include "sys/wait.h"
+#include "sys/syscall.h"
+#include "sys/ptrace.h"
+#include "sys/types.h"
+#include "sys/stat.h"
+#include "sys/user.h"
+#include "sys/mman.h"
 
 
 namespace proc {
+
+enum {
+    PROC_SUCCESS = 0,
+    PROC_FAILURE = 1
+};
 
 class EggHunter;
 
 class FunctionTable
 {
   private:
-    uint32_t dlopen_;
-    uint32_t mmap_;
+    uintptr_t dlopen_;
+    uintptr_t mmap_;
 
-    uint32_t GetLibBgnAddr(pid_t, const char*);
-    uint32_t GetFuncBgnAddr(const char*, const char*);
+    uintptr_t GetLibraryAddress(pid_t, const char*);
+    uintptr_t GetFunctionAddress(const char*, const char*);
 
   public:
     FunctionTable()
@@ -25,14 +38,14 @@ class FunctionTable
     ~FunctionTable()
     {}
 
-    int32_t Resolve(pid_t, pid_t);
+    bool Resolve(pid_t, pid_t);
 
-    uint32_t GetDlopen() const
+    uintptr_t GetDlopen() const
     {
         return dlopen_;
     }
 
-    uint32_t GetMmap() const
+    uintptr_t GetMmap() const
     {
         return mmap_;
     }
@@ -44,12 +57,12 @@ class EggHunter
     pid_t pid_app_;
     FunctionTable func_tbl_;
 
-    int32_t CaptureApp(pid_t, const char*);
-    int32_t InjectApp(const char*);
+    bool CaptureApp(pid_t, const char*);
+    bool InjectApp(const char*);
     void WaitForForkEvent(pid_t);
     void CheckStartupCmd(const char*);
-    int32_t PokeTextInApp(uint32_t, const char*, int32_t);
-    int32_t PeekTextInApp(uint32_t, char*, int32_t);
+    bool PokeTextInApp(uintptr_t, const char*, size_t);
+    bool PeekTextInApp(uintptr_t, char*, size_t);
 
   public:
     EggHunter()
@@ -59,7 +72,7 @@ class EggHunter
     ~EggHunter()
     {}
 
-    int32_t Hunt(pid_t, const char*, const char*);
+    void Hunt(pid_t, const char*, const char*);
 };
 
 }

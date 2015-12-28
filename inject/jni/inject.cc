@@ -1,15 +1,14 @@
-#include <util.h>
-#include <proc.h>
+#include "globals.h"
+#include "proc.h"
 
 
-using namespace util;
+static const char* kOptLongZygote   = "zygote";
+static const char* kOptLongAppName  = "app";
+static const char* kOptLongLibPath  = "lib";
 
-#define OPT_LONG_ZYGOTE             "zygote"
-#define OPT_LONG_APPNAME            "app"
-#define OPT_LONG_LIBPATH            "lib"
-#define OPT_ZYGOTE                  'z'
-#define OPT_APPNAME                 'a'
-#define OPT_LIBPATH                 'l'
+static const char kOptZygote    = 'z';
+static const char kOptAppName   = 'a';
+static const char kOptLibPath   = 'l';
 
 
 void PrintUsage()
@@ -18,50 +17,50 @@ void PrintUsage()
     "                  -z       PID -a    APPNAME -l    LIBPATH\n\n"
     "Example: ./inject --zygote 933 --app org.zsshen.bmi --lib /data/local/tmp/libhook.so\n"
     "         ./inject -z       933 -a    org.zsshen.bmi -l    /data/local/tmp/libhook.so\n\n";
-    std::cout << usage;
+    std::cerr << usage;
 }
 
-
-int32_t main(int32_t argc, char** argv)
+int main(int32_t argc, char** argv)
 {
     // Acquire the command line arguments.
-    static struct option opts[] = {
-        {OPT_LONG_APPNAME, required_argument, 0, OPT_APPNAME},
-        {OPT_LONG_LIBPATH, required_argument, 0, OPT_LIBPATH},
+    struct option opts[] = {
+        {kOptLongZygote, required_argument, 0, kOptZygote},
+        {kOptLongAppName, required_argument, 0, kOptAppName},
+        {kOptLongLibPath, required_argument, 0, kOptLibPath},
     };
 
-    char sz_order[SIZE_TINY_BLAH];
-    memset(sz_order, 0, sizeof(char) * SIZE_TINY_BLAH);
-    sprintf(sz_order, "%c:%c:%c:", OPT_ZYGOTE, OPT_APPNAME, OPT_LIBPATH);
+    char sz_order[kBlahSizeTiny];
+    memset(sz_order, 0, sizeof(char) * kBlahSizeTiny);
+    sprintf(sz_order, "%c:%c:%c:", kOptZygote, kOptAppName, kOptLibPath);
 
-    int32_t opt, idx_opt;
+    int opt, idx_opt;
     pid_t pid_zygote = 0;
-    char *sz_app = NULL, *sz_path = NULL;
+    char *app_name = nullptr, *lib_path = nullptr;
     while ((opt = getopt_long(argc, argv, sz_order, opts, &idx_opt)) != -1) {
         switch (opt) {
-            case OPT_ZYGOTE:
+            case kOptZygote:
                 pid_zygote = atoi(optarg);
                 break;
-            case OPT_APPNAME:
-                sz_app = optarg;
+            case kOptAppName:
+                app_name = optarg;
                 break;
-            case OPT_LIBPATH:
-                sz_path = optarg;
+            case kOptLibPath:
+                lib_path = optarg;
                 break;
             default:
                 PrintUsage();
-                return FAIL;
+                return EXIT_FAILURE;
         }
     }
 
-    if (pid_zygote == 0 || !sz_app || !sz_path) {
+    if (pid_zygote == 0 || !app_name || !lib_path) {
         PrintUsage();
-        return FAIL;
+        return EXIT_FAILURE;
     }
 
     // Start to inject the designated shared object.
     proc::EggHunter hunter;
-    hunter.Hunt(pid_zygote, sz_app, sz_path);
+    hunter.Hunt(pid_zygote, app_name, lib_path);
 
-    return SUCC;
+    return EXIT_SUCCESS;
 }

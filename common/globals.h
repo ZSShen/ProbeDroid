@@ -24,6 +24,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <dlfcn.h>
 
 #include <sys/mman.h>
 #include <sys/types.h>
@@ -43,6 +44,7 @@ static constexpr int kPageSize = 4096;
 
 // Auxiliary buffer size.
 static constexpr int kBlahSize 		= 1024;
+static constexpr int kBlahSizeMid   = 512;
 static constexpr int kBlahSizeTiny 	= 128;
 
 #endif
