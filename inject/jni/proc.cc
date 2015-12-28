@@ -26,12 +26,10 @@ uintptr_t FunctionTable::GetLibraryAddress(pid_t pid, const char* lib_path)
 {
     char buf[kBlahSizeMid];
     sprintf(buf, "/proc/%d/maps", pid);
-    //std::cout << buf << std::endl;
 
     std::ifstream map(buf, std::ifstream::in);
     while (map.good() && !map.eof()) {
         map.getline(buf, kBlahSizeMid);
-        //std::cout << buf << std::endl;
 
         if (!strstr(buf, kPermReadExec))
             continue;
@@ -63,20 +61,16 @@ bool FunctionTable::Resolve(pid_t pid_me, pid_t pid_him)
     // First, resolve the address of libc and libdl loaded in the injector
     // and the target app.
     uintptr_t addr_linker_me = GetLibraryAddress(pid_me, kPathLinker);
-    //std::cout << addr_linker_me << std::endl;
     if (addr_linker_me == 0)
         return PROC_FAILURE;
     uintptr_t addr_linker_him = GetLibraryAddress(pid_him, kPathLinker);
-    //std::cout << addr_linker_him << std::endl;
     if (addr_linker_him == 0)
         return PROC_FAILURE;
 
     uintptr_t addr_libc_me = GetLibraryAddress(pid_me, kPathLibc);
-    //std::cout << addr_libc_me << std::endl;
     if (addr_libc_me == 0)
         return PROC_FAILURE;
     uintptr_t addr_libc_him = GetLibraryAddress(pid_him, kPathLibc);
-    //std::cout << addr_libc_him << std::endl;
     if (addr_libc_him == 0)
         return PROC_FAILURE;
 
@@ -85,11 +79,9 @@ bool FunctionTable::Resolve(pid_t pid_me, pid_t pid_him)
     // libdl and libc of the target app to calculate the addresses of dlopen()
     // and mmap() of the target.
     uintptr_t addr_dlopen_me = GetFunctionAddress(kNameLinker, kFuncDlopen);
-    //std::cout << addr_dlopen_me << std::endl;
     if (addr_dlopen_me == 0)
         return PROC_FAILURE;
     uintptr_t addr_mmap_me = GetFunctionAddress(kPathLibc, kFuncMmap);
-    //std::cout << addr_mmap_me << std::endl;
     if (addr_mmap_me == 0)
         return PROC_FAILURE;
 
@@ -141,8 +133,7 @@ void EggHunter::CheckStartupCmd(const char* app_name)
         if (cmd.good())
             cmd.getline(buf, kBlahSizeMid);
         if (strstr(buf, app_name)) {
-            LOG(INFO) << StringPrintf("Capture the target app %s(%d)",
-                                      buf, pid_app_);
+            TIP() << StringPrintf("[+] Capture the target app %s(%d).\n", buf, pid_app_);
             break;
         }
     }
@@ -283,9 +274,9 @@ bool EggHunter::InjectApp(const char* lib_path)
 
         uintptr_t addr_blk = reg_modi.eax;
         #if __WORDSIZE == 64
-        LOG(INFO) << StringPrintf("mmap() successes with 0x%016lx returned.", addr_blk);
+        TIP() << StringPrintf("[+] mmap() successes with 0x%016lx returned.\n", addr_blk);
         #else
-        LOG(INFO) << StringPrintf("mmap() successes with 0x%08x returned.", addr_blk);
+        TIP() << StringPrintf("[+] mmap() successes with 0x%08x returned.\n", addr_blk);
         #endif
 
         if (PokeTextInApp(addr_blk, payload, len_payload) == -1)
@@ -318,7 +309,7 @@ bool EggHunter::InjectApp(const char* lib_path)
         // invalid return address.
         if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
             LOG_SYSERR_AND_THROW()
-        LOG(INFO) << StringPrintf("dlopen() successes.");
+        TIP() << StringPrintf("[+] dlopen() successes.\n");
 
         // At this stage, we finish the library injection and should restore
         // the context of the target app.
@@ -343,6 +334,10 @@ void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_pat
         return;
     if (InjectApp(lib_path) != PROC_SUCCESS)
         return;
+
+    // TODO: A scanning towards /proc/pid/maps is required to confirm this
+    // tip message.
+    TIP() << StringPrintf("[+] %s is successfully injected.\n", lib_path);
 }
 
 }

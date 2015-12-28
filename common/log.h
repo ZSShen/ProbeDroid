@@ -57,6 +57,7 @@ const int VERBOSE = 0, DEBUG = 1, INFO = 2, WARNING = 3, ERROR = 4, FATAL = 5;
 
 #define LOG(severity) LogMessage(__FILE__, __LINE__, severity, -1).stream()
 #define PLOG(severity) LogMessage(__FILE__, __LINE__, severity, errno).stream()
+#define TIP() Inform().stream()
 
 
 template <typename LHS, typename RHS>
@@ -109,6 +110,25 @@ class LogMessage
     const std::unique_ptr<LogMessageData> data_;
 
     DISALLOW_COPY_AND_ASSIGN(LogMessage);
+};
+
+class Inform
+{
+  public:
+    Inform()
+    {}
+
+    ~Inform();
+
+    std::ostream& stream()
+    {
+        return buffer_;
+    }
+
+  private:
+    std::ostringstream buffer_;
+
+    DISALLOW_COPY_AND_ASSIGN(Inform);
 };
 
 #endif

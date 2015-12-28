@@ -55,3 +55,9 @@ LogMessage::~LogMessage()
     if (data_->severity == FATAL)
         exit(EXIT_FAILURE);
 }
+
+Inform::~Inform()
+{
+    std::string msg(buffer_.str());
+    fputs(msg.c_str(), stdout);
+}
