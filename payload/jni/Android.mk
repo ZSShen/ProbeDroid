@@ -14,6 +14,7 @@ LOCAL_SRC_FILES         :=  ../../common/utf.cc \
                             ./gadget/java/lang/stringbuilder/stringbuilder.cc \
                             ./gadget/java/lang/string/string-asm.s \
                             ./gadget/java/lang/string/string.cc \
+                            ./gadget/gadget.cc \
                             ./gadget/gadget-asm.s \
                             hook.cc \
 

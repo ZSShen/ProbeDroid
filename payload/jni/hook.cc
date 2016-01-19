@@ -29,6 +29,6 @@ void __attribute__((constructor)) HookEntry()
 
     Gadget_java_lang_StringBuilder gadget_stringbuilder;
     gadget_stringbuilder.toStringPatcher(env);
-    Gadget_java_lang_String gadget_string;
-    gadget_string.indexOf_javalangString_I_Patcher(env);
+    //Gadget_java_lang_String gadget_string;
+    //gadget_string.indexOf_javalangString_I_Patcher(env);
 }
