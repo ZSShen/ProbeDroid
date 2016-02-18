@@ -1,0 +1,33 @@
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                xmlns:tools="http://schemas.android.com/tools"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                tools:context=".MainActivity" >
+
+    <EditText
+        android:id="@+id/phoneNumber"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_alignParentLeft="true"
+        android:layout_alignParentTop="true"
+        android:hint="Type a number to call..."
+        android:ems="10"
+        android:inputType="phone" />
+
+    <Button
+        android:id="@+id/call"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/phoneNumber"
+        android:layout_marginTop="20dp"
+        android:text="Call" />
+
+    <Button
+        android:id="@+id/dial"
+        android:layout_width="fill_parent"
+        android:layout_height="wrap_content"
+        android:layout_below="@+id/call"
+        android:layout_marginTop="20dp"
+        android:text="Dial and Call" />
+
+</RelativeLayout>
