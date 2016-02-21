@@ -201,24 +201,36 @@ bool EggHunter::CaptureApp(pid_t pid_zygote, const char* app_name)
     return rtn;
 }
 
-bool EggHunter::InjectApp(const char* lib_path)
+bool EggHunter::InjectApp(const char* lib_path, const char* module_path)
 {
     pid_t pid_inject = getpid();
 
     if (func_tbl_.Resolve(pid_inject, pid_app_) != PROC_SUCCESS)
         return PROC_FAILURE;
 
-    // Prepare the library pathname. zero padding is necessary to produce
+    // Prepare the library pathname. Zero padding is necessary to produce
     // the text word applied by ptrace().
-    char payload[kBlahSizeMid];
-    size_t len_payload = strlen(lib_path);
-    strncpy(payload, lib_path, len_payload);
-    payload[len_payload++] = 0;
+    char payload_lib[kBlahSizeMid];
+    size_t len_lib = strlen(lib_path);
+    strncpy(payload_lib, lib_path, len_lib);
+    payload_lib[len_lib++] = 0;
 
-    div_t count_word = div(len_payload, sizeof(long));
+    div_t count_word = div(len_lib, sizeof(long));
     size_t patch = (count_word.rem > 0)? (sizeof(long) - count_word.rem) : 0;
     for (size_t i = 0 ; i < patch ; ++i)
-        payload[len_payload++] = 0;
+        payload_lib[len_lib++] = 0;
+
+    // Prepare the module pathname. Zero padding is necessary to produce
+    // the text word applied by ptrace().
+    char payload_module[kBlahSizeMid];
+    size_t len_module = snprintf(payload_module, kBlahSizeMid, "%s%c%s",
+                        kKeyPathAnalysisModule, kSignEqual, module_path);
+    payload_module[len_module++] = 0;
+
+    count_word = div(len_module, sizeof(long));
+    patch = (count_word.rem > 0)? (sizeof(long) - count_word.rem) : 0;
+    for (size_t i = 0 ; i < patch ; ++i)
+        payload_module[len_module++] = 0;
 
     // Prepare the addresses of mmap() and dlopen() of the target app.
     uintptr_t addr_mmap = func_tbl_.GetMmap();
@@ -231,7 +243,7 @@ bool EggHunter::InjectApp(const char* lib_path)
         if (ptrace(PTRACE_GETREGS, pid_app_, nullptr, &reg_orig) == -1)
             LOG_SYSERR_AND_THROW();
 
-        // First, we force the target app to execute mmap(). The allocated
+        // Firstly, we force the target app to execute mmap(). The allocated
         // block will be stuffed with the pathname of the hooking library.
         // Note, to fit the calling convention,
         // param[0] stores the return address, and
@@ -279,10 +291,10 @@ bool EggHunter::InjectApp(const char* lib_path)
         TIP() << StringPrintf("[+] mmap() successes with 0x%08x returned.\n", addr_blk);
         #endif
 
-        if (PokeTextInApp(addr_blk, payload, len_payload) == -1)
+        if (PokeTextInApp(addr_blk, payload_lib, len_lib) == -1)
             LOG_SYSERR_AND_THROW()
 
-        // Second, we force the target app to execute dlopen(). Then our hooking
+        // Secondly, we force the target app to execute dlopen(). Then our hooking
         // library will be loaded by target.
         // Note, to fit the calling convention,
         // param[0] stores the return address, and
@@ -311,6 +323,11 @@ bool EggHunter::InjectApp(const char* lib_path)
             LOG_SYSERR_AND_THROW()
         TIP() << StringPrintf("[+] dlopen() successes.\n");
 
+        // Thirdly, stuff the pathname of the instrumentation module into the
+        // newly mapped memory segment.
+        if (PokeTextInApp(addr_blk, payload_module, len_module) == -1)
+            LOG_SYSERR_AND_THROW()
+
         // At this stage, we finish the library injection and should restore
         // the context of the target app.
         if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_orig) == -1)
@@ -328,11 +345,12 @@ bool EggHunter::InjectApp(const char* lib_path)
     return rtn;
 }
 
-void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_path)
+void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_path,
+                     const char* module_path)
 {
     if (CaptureApp(pid_zygote, app_name) != PROC_SUCCESS)
         return;
-    if (InjectApp(lib_path) != PROC_SUCCESS)
+    if (InjectApp(lib_path, module_path) != PROC_SUCCESS)
         return;
 
     // TODO: A scanning towards /proc/pid/maps is required to confirm this

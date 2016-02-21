@@ -58,7 +58,7 @@ class EggHunter
     FunctionTable func_tbl_;
 
     bool CaptureApp(pid_t, const char*);
-    bool InjectApp(const char*);
+    bool InjectApp(const char*, const char*);
     void WaitForForkEvent(pid_t);
     void CheckStartupCmd(const char*);
     bool PokeTextInApp(uintptr_t, const char*, size_t);
@@ -72,7 +72,7 @@ class EggHunter
     ~EggHunter()
     {}
 
-    void Hunt(pid_t, const char*, const char*);
+    void Hunt(pid_t, const char*, const char*, const char*);
 };
 
 }
