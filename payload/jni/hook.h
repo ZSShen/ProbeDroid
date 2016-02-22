@@ -19,6 +19,7 @@ class Penetrator
 
   	bool CraftAnalysisModulePath();
   	bool CraftDexPrivatePath();
+  	bool CreateDexPrivateDir();
 
   private:
   	char* module_path_;

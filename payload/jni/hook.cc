@@ -13,6 +13,8 @@ namespace hook {
 static const char* kDirDexData      = "data";
 static const char* kDirInstrument   = "instrument";
 
+static constexpr int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
+
 
 bool Penetrator::CraftAnalysisModulePath()
 {
@@ -74,6 +76,20 @@ bool Penetrator::CraftDexPrivatePath()
     return HOOK_FAILURE;
 }
 
+bool Penetrator::CreateDexPrivateDir()
+{
+    struct stat stat_buf;
+    if (stat(dex_path_.get(), &stat_buf) == 0) {
+        // If the private directory is already created, just return now.
+        if (S_ISDIR(stat_buf.st_mode))
+            return HOOK_SUCCESS;
+        if (unlink(dex_path_.get()) != 0)
+            return HOOK_FAILURE;
+    }
+    return (mkdir(dex_path_.get(), kPrivateDexPerm) == 0)?
+           HOOK_SUCCESS : HOOK_FAILURE;
+}
+
 }
 
 using namespace art;
@@ -86,6 +102,8 @@ void __attribute__((constructor)) HookEntry()
     if (penerator.CraftAnalysisModulePath() != hook::HOOK_SUCCESS)
         return;
     if (penerator.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
+        return;
+    if (penerator.CreateDexPrivateDir() != hook::HOOK_SUCCESS)
         return;
 
     //JNIEnv *env;
