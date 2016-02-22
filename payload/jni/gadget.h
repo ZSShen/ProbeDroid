@@ -1,4 +1,3 @@
-
 #ifndef _GADGET_H_
 #define _GADGET_H_
 
@@ -8,6 +7,7 @@
 #include "mirror/string-inl.h"
 #include "mirror/array-inl.h"
 #include "mirror/art_method-inl.h"
+
 
 typedef void (*OriginalCall) ();
 

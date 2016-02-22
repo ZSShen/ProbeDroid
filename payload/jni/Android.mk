@@ -9,12 +9,7 @@ LOCAL_C_INCLUDES        +=  ../../common \
                             ./gadget
 
 LOCAL_SRC_FILES         :=  ../../common/utf.cc \
-                            ../../android/art/runtime/mirror/string.cc \
-                            ./gadget/java/lang/stringbuilder/stringbuilder-asm.s \
-                            ./gadget/java/lang/stringbuilder/stringbuilder.cc \
-                            ./gadget/java/lang/string/string-asm.s \
-                            ./gadget/java/lang/string/string.cc \
-                            ./gadget/gadget-asm.s \
+                            ./arch/x86/gadget_x86.s \
                             hook.cc \
 
 LOCAL_CFLAGS            := -g -fexceptions
