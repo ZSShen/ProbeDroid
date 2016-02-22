@@ -13,16 +13,18 @@ class Penetrator
 {
   public:
 	Penetrator()
-      : module_path_(nullptr)
+      : module_path_(nullptr),
+      	dex_path_(nullptr)
     {}
 
-  	bool ResolveAnalysisModule();
+  	bool CraftAnalysisModulePath();
+  	bool CraftDexPrivatePath();
 
   private:
   	char* module_path_;
+  	std::unique_ptr<char> dex_path_;
 };
 
 }
-
 
 #endif

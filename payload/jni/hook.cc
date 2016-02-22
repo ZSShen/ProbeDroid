@@ -10,7 +10,11 @@
 
 namespace hook {
 
-bool Penetrator::ResolveAnalysisModule()
+static const char* kDirDexData      = "data";
+static const char* kDirInstrument   = "instrument";
+
+
+bool Penetrator::CraftAnalysisModulePath()
 {
     char buf[kBlahSizeMid];
     sprintf(buf, "/proc/self/maps");
@@ -49,6 +53,27 @@ bool Penetrator::ResolveAnalysisModule()
     return HOOK_FAILURE;
 }
 
+bool Penetrator::CraftDexPrivatePath()
+{
+    char buf[kBlahSizeMid];
+    sprintf(buf, "/proc/self/cmdline");
+
+    std::ifstream map(buf, std::ifstream::in);
+    if (map.good() && !map.eof()) {
+        map.getline(buf, kBlahSizeMid);
+        size_t len = 2 * (1 + strlen(kDirDexData)) + (1 + strlen(buf)) +
+                     (1 + strlen(kDirInstrument)) + 1;
+        char* path = new char[len];
+        if (!path)
+            return HOOK_FAILURE;
+        snprintf(path, len, "/%s/%s/%s/%s", kDirDexData, kDirDexData, buf,
+                 kDirInstrument);
+        dex_path_.reset(path);
+        return HOOK_SUCCESS;
+    }
+    return HOOK_FAILURE;
+}
+
 }
 
 using namespace art;
@@ -58,7 +83,9 @@ void __attribute__((constructor)) HookEntry()
     LOGD("\n\nHook success, pid = %d\n\n", getpid());
 
     hook::Penetrator penerator;
-    if (penerator.ResolveAnalysisModule() != hook::HOOK_SUCCESS)
+    if (penerator.CraftAnalysisModulePath() != hook::HOOK_SUCCESS)
+        return;
+    if (penerator.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
         return;
 
     //JNIEnv *env;
