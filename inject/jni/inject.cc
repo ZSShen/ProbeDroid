@@ -65,7 +65,6 @@ int main(int32_t argc, char** argv)
 
     if (pid_zygote == 0 || !app_name || !lib_path || !module_path) {
         PrintUsage();
-        printf("WTF %p %p %p\n", app_name, lib_path, module_path);
         return EXIT_FAILURE;
     }
 

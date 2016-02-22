@@ -47,4 +47,12 @@ static constexpr int kBlahSize 		= 1024;
 static constexpr int kBlahSizeMid   = 512;
 static constexpr int kBlahSizeTiny 	= 128;
 
+// Auxiliary symbols for inter-process communication.
+static char kSignAssign = '=';
+static const char* kKeyPathAnalysisModule = "PATH_MODULE";
+
+// Auxiliary symbols for memory access permission.
+static const char* kPermReadExec 		= "r-xp";
+static const char* kPermReadWrteExec 	= "rwxp";
+
 #endif

@@ -12,7 +12,6 @@ static const char* kPathLibc        = "/system/lib/libc.so";
 static const char* kNameLinker      = "libdl.so";
 static const char* kFuncDlopen      = "dlopen";
 static const char* kFuncMmap        = "mmap";
-static const char* kPermReadExec    = "r-xp";
 
 
 #define LOG_SYSERR_AND_THROW()                                                 \
@@ -208,29 +207,22 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path)
     if (func_tbl_.Resolve(pid_inject, pid_app_) != PROC_SUCCESS)
         return PROC_FAILURE;
 
-    // Prepare the library pathname. Zero padding is necessary to produce
-    // the text word applied by ptrace().
-    char payload_lib[kBlahSizeMid];
-    size_t len_lib = strlen(lib_path);
-    strncpy(payload_lib, lib_path, len_lib);
-    payload_lib[len_lib++] = 0;
+    // Prepare the library and module pathnames. Zero padding is necessary to
+    // produce the text word recognized by ptrace().
+    char payload[kBlahSizeMid];
+    size_t len_payload = strlen(lib_path);
+    strncpy(payload, lib_path, kBlahSizeMid);
+    payload[len_payload++] = 0;
 
-    div_t count_word = div(len_lib, sizeof(long));
+    size_t append = snprintf(payload + len_payload, kBlahSizeMid - len_payload,
+                    "%s%c%s", kKeyPathAnalysisModule, kSignAssign, module_path);
+    len_payload += append;
+    payload[len_payload++] = 0;
+
+    div_t count_word = div(len_payload, sizeof(long));
     size_t patch = (count_word.rem > 0)? (sizeof(long) - count_word.rem) : 0;
     for (size_t i = 0 ; i < patch ; ++i)
-        payload_lib[len_lib++] = 0;
-
-    // Prepare the module pathname. Zero padding is necessary to produce
-    // the text word applied by ptrace().
-    char payload_module[kBlahSizeMid];
-    size_t len_module = snprintf(payload_module, kBlahSizeMid, "%s%c%s",
-                        kKeyPathAnalysisModule, kSignEqual, module_path);
-    payload_module[len_module++] = 0;
-
-    count_word = div(len_module, sizeof(long));
-    patch = (count_word.rem > 0)? (sizeof(long) - count_word.rem) : 0;
-    for (size_t i = 0 ; i < patch ; ++i)
-        payload_module[len_module++] = 0;
+        payload[len_payload++] = 0;
 
     // Prepare the addresses of mmap() and dlopen() of the target app.
     uintptr_t addr_mmap = func_tbl_.GetMmap();
@@ -291,7 +283,7 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path)
         TIP() << StringPrintf("[+] mmap() successes with 0x%08x returned.\n", addr_blk);
         #endif
 
-        if (PokeTextInApp(addr_blk, payload_lib, len_lib) == -1)
+        if (PokeTextInApp(addr_blk, payload, len_payload) == -1)
             LOG_SYSERR_AND_THROW()
 
         // Secondly, we force the target app to execute dlopen(). Then our hooking
@@ -322,11 +314,6 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path)
         if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
             LOG_SYSERR_AND_THROW()
         TIP() << StringPrintf("[+] dlopen() successes.\n");
-
-        // Thirdly, stuff the pathname of the instrumentation module into the
-        // newly mapped memory segment.
-        if (PokeTextInApp(addr_blk, payload_module, len_module) == -1)
-            LOG_SYSERR_AND_THROW()
 
         // At this stage, we finish the library injection and should restore
         // the context of the target app.
