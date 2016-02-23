@@ -2,11 +2,14 @@
 #define _SIGNATURE_H_
 
 
+// Cache some commonly used Java signatures for method invocation.
 static const char* kNormClassLoader = "java/lang/ClassLoader";
 static const char* kNormDexClassLoader = "dalvik/system/DexClassLoader";
+static const char* kNormObject = "java/lang/Object";
 
-static const char* kFuncGetSystemClassLoader = "getSystemClassLoader";
 static const char* kFuncConstructor = "<init>";
+static const char* kFuncGetSystemClassLoader = "getSystemClassLoader";
+static const char* kFuncToString = "toString";
 
 static const char* kSigClassLoader = "Ljava/lang/ClassLoader;";
 static const char* kSigDexClassLoader = "Ldalvik/system/DexClassLoader;";

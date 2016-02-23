@@ -10,11 +10,42 @@
 
 namespace hook {
 
-static const char* kDirDexData      = "data";
-static const char* kDirInstrument   = "instrument";
+#define CHECK_AND_LOG_EXCEPTION(env, except)                                   \
+        do {                                                                   \
+            if ((except = env->ExceptionOccurred())) {                         \
+                return HOOK_FAILURE;                                           \
+            }                                                                  \
+        } while (0);                                                           \
 
-static constexpr int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
 
+// TODO: A more fine-grained approach is needed instead of this simple logd spew.
+void Penetrator::LogJNIException(JNIEnv* env, jthrowable except)
+{
+    jclass clazz = env->FindClass(kNormObject);
+    if (env->ExceptionCheck()) {
+        LOGD("%s\n", kRecursiveExcept);
+        return;
+    }
+    char sig[kBlahSizeMid];
+    snprintf(sig, kBlahSizeMid, "()%s", kSigString);
+    jmethodID meth = env->GetMethodID(clazz, kFuncToString, sig);
+    if (env->ExceptionCheck()) {
+        LOGD("%s\n", kRecursiveExcept);
+        return;
+    }
+    jstring str = reinterpret_cast<jstring>(env->CallObjectMethod(except, meth));
+    if (env->ExceptionCheck()) {
+        LOGD("%s\n", kRecursiveExcept);
+        return;
+    }
+    jboolean is_copy = false;
+    const char* cstr = env->GetStringUTFChars(str, &is_copy);
+    if (env->ExceptionCheck()) {
+        LOGD("%s\n", kRecursiveExcept);
+        return;
+    }
+    LOGD("%s\n", cstr);
+}
 
 bool Penetrator::CraftAnalysisModulePath()
 {
@@ -105,27 +136,36 @@ bool Penetrator::LoadAnalysisModule()
     jvm_->AttachCurrentThread(&env, nullptr);
 
     char sig[kBlahSizeMid];
+    jthrowable except;
     // Resolve "static ClassLoader ClassLoader.getSystemClassLoader()".
     jclass clazz = env->FindClass(kNormClassLoader);
+    CHECK_AND_LOG_EXCEPTION(env, except);
     snprintf(sig, kBlahSizeMid, "()%s", kSigClassLoader);
     jmethodID meth = env->GetStaticMethodID(clazz, kFuncGetSystemClassLoader, sig);
+    CHECK_AND_LOG_EXCEPTION(env, except);
 
     // Get "java.lang.ClassLoader".
     jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
+    CHECK_AND_LOG_EXCEPTION(env, except);
 
     // Resolve "DexClassLoader.DexClassLoader(String, String, String, ClassLoader)"
     clazz = env->FindClass(kNormDexClassLoader);
+    CHECK_AND_LOG_EXCEPTION(env, except);
     snprintf(sig, kBlahSizeMid, "(%s%s%s%s)V", kSigString, kSigString,
              kSigString, kSigClassLoader);
     meth = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHECK_AND_LOG_EXCEPTION(env, except);
 
     // Convert the pathname strings to UTF format.
     jstring path_module = env->NewStringUTF(module_path_);
+    CHECK_AND_LOG_EXCEPTION(env, except);
     jstring path_cache = env->NewStringUTF(dex_path_.get());
+    CHECK_AND_LOG_EXCEPTION(env, except);
 
-    // Create the custom "dalvk.system.DexClassLoader".
+    // Create the custom "dalvik.system.DexClassLoader".
     jobject dex_class_loader = env->NewObject(clazz, meth, path_module, path_cache,
                                               path_cache, class_loader);
+    CHECK_AND_LOG_EXCEPTION(env, except);
 
     jvm_->DetachCurrentThread();
     return HOOK_SUCCESS;
@@ -155,7 +195,6 @@ void __attribute__((constructor)) HookEntry()
     // To avoid the ANR, we create a worker thread to offload the task bound to
     // the main thread. Note that this is just a work around, more stable
     // approach is needed.
-    //std::function<void(const std::string&)>
     auto func = std::bind(&hook::Penetrator::LoadAnalysisModule, &penetrator);
     std::packaged_task<bool()> task(func);
     std::future<bool> future = task.get_future();
