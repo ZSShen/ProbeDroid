@@ -2,6 +2,9 @@
 #define _HOOK_H_
 
 
+#include <jni.h>
+
+
 namespace hook {
 
 enum {
@@ -20,10 +23,13 @@ class Penetrator
   	bool CraftAnalysisModulePath();
   	bool CraftDexPrivatePath();
   	bool CreateDexPrivateDir();
+  	bool CacheJVM();
+  	bool LoadAnalysisModule();
 
   private:
   	char* module_path_;
   	std::unique_ptr<char> dex_path_;
+  	JavaVM* jvm_;
 };
 
 }

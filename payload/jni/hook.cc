@@ -1,7 +1,11 @@
+#include <thread>
+#include <future>
+
 #include "globals.h"
 #include "logcat.h"
 #include "hook.h"
 #include "gadget.h"
+#include "signature.h"
 
 
 namespace hook {
@@ -86,17 +90,77 @@ bool Penetrator::CreateDexPrivateDir()
            HOOK_SUCCESS : HOOK_FAILURE;
 }
 
+bool Penetrator::CacheJVM()
+{
+    JNIEnv *env;
+    // Apply the manually crafted assembly gadget to get the JNIEnv* handle.
+    GetJniEnv(&env);
+    // Apply the Android JNI to get the JVM handle.
+    return (env->GetJavaVM(&jvm_) == JNI_OK)? HOOK_SUCCESS : HOOK_FAILURE;
+}
+
+bool Penetrator::LoadAnalysisModule()
+{
+    JNIEnv* env;
+    jvm_->AttachCurrentThread(&env, nullptr);
+
+    char sig[kBlahSizeMid];
+    // Resolve "static ClassLoader ClassLoader.getSystemClassLoader()".
+    jclass clazz = env->FindClass(kNormClassLoader);
+    snprintf(sig, kBlahSizeMid, "()%s", kSigClassLoader);
+    jmethodID meth = env->GetStaticMethodID(clazz, kFuncGetSystemClassLoader, sig);
+
+    // Get "java.lang.ClassLoader".
+    jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
+
+    // Resolve "DexClassLoader.DexClassLoader(String, String, String, ClassLoader)"
+    clazz = env->FindClass(kNormDexClassLoader);
+    snprintf(sig, kBlahSizeMid, "(%s%s%s%s)V", kSigString, kSigString,
+             kSigString, kSigClassLoader);
+    meth = env->GetMethodID(clazz, kFuncConstructor, sig);
+
+    // Convert the pathname strings to UTF format.
+    jstring path_module = env->NewStringUTF(module_path_);
+    jstring path_cache = env->NewStringUTF(dex_path_.get());
+
+    // Create the custom "dalvk.system.DexClassLoader".
+    jobject dex_class_loader = env->NewObject(clazz, meth, path_module, path_cache,
+                                              path_cache, class_loader);
+
+    jvm_->DetachCurrentThread();
+    return HOOK_SUCCESS;
+}
+
 }
 
 void __attribute__((constructor)) HookEntry()
 {
     LOGD("\n\nHook success, pid = %d\n\n", getpid());
 
-    hook::Penetrator penerator;
-    if (penerator.CraftAnalysisModulePath() != hook::HOOK_SUCCESS)
+    hook::Penetrator penetrator;
+    // Generate the pathnames required by Android DexClassLoader to dynamically
+    // load our instrumentation module.
+    if (penetrator.CraftAnalysisModulePath() != hook::HOOK_SUCCESS)
         return;
-    if (penerator.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
+    if (penetrator.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
         return;
-    if (penerator.CreateDexPrivateDir() != hook::HOOK_SUCCESS)
+    if (penetrator.CreateDexPrivateDir() != hook::HOOK_SUCCESS)
+        return;
+
+    // Retrieve the JVM handle which is necessary for the JNI interaction later.
+    if (penetrator.CacheJVM() != hook::HOOK_SUCCESS)
+        return;
+
+    // Load our instrumentation module.
+    // To avoid the ANR, we create a worker thread to offload the task bound to
+    // the main thread. Note that this is just a work around, more stable
+    // approach is needed.
+    //std::function<void(const std::string&)>
+    auto func = std::bind(&hook::Penetrator::LoadAnalysisModule, &penetrator);
+    std::packaged_task<bool()> task(func);
+    std::future<bool> future = task.get_future();
+    std::thread thread(std::move(task));
+    thread.join();
+    if (future.get() != hook::HOOK_SUCCESS)
         return;
 }
