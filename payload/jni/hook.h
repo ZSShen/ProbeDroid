@@ -33,7 +33,7 @@ class Penetrator
     static constexpr const char* kDirDexData = "data";
     static constexpr const char* kDirInstrument = "instrument";
     static constexpr const char* kRecursiveExcept = "Exception occurs during "
-                                                "exception message generation.";
+                                                "exception message processing.";
 
     char* module_path_;
     std::unique_ptr<char> dex_path_;

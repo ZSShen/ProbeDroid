@@ -10,9 +10,12 @@
 
 namespace hook {
 
-#define CHECK_AND_LOG_EXCEPTION(env, except)                                   \
+#define CHECK_AND_LOG_EXCEPTION(jvm, env, except)                              \
         do {                                                                   \
             if ((except = env->ExceptionOccurred())) {                         \
+                env->ExceptionClear();                                         \
+                LogJNIException(env, except);                                  \
+                jvm->DetachCurrentThread();                                    \
                 return HOOK_FAILURE;                                           \
             }                                                                  \
         } while (0);                                                           \
@@ -139,33 +142,33 @@ bool Penetrator::LoadAnalysisModule()
     jthrowable except;
     // Resolve "static ClassLoader ClassLoader.getSystemClassLoader()".
     jclass clazz = env->FindClass(kNormClassLoader);
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
     snprintf(sig, kBlahSizeMid, "()%s", kSigClassLoader);
     jmethodID meth = env->GetStaticMethodID(clazz, kFuncGetSystemClassLoader, sig);
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
 
     // Get "java.lang.ClassLoader".
     jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
 
     // Resolve "DexClassLoader.DexClassLoader(String, String, String, ClassLoader)"
     clazz = env->FindClass(kNormDexClassLoader);
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
     snprintf(sig, kBlahSizeMid, "(%s%s%s%s)V", kSigString, kSigString,
              kSigString, kSigClassLoader);
     meth = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
 
     // Convert the pathname strings to UTF format.
     jstring path_module = env->NewStringUTF(module_path_);
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
     jstring path_cache = env->NewStringUTF(dex_path_.get());
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
 
     // Create the custom "dalvik.system.DexClassLoader".
     jobject dex_class_loader = env->NewObject(clazz, meth, path_module, path_cache,
                                               path_cache, class_loader);
-    CHECK_AND_LOG_EXCEPTION(env, except);
+    CHECK_AND_LOG_EXCEPTION(jvm_, env, except);
 
     jvm_->DetachCurrentThread();
     return HOOK_SUCCESS;
