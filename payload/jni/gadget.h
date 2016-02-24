@@ -16,7 +16,7 @@ extern "C" void GetJniEnv(JNIEnv**) __asm__("GetJniEnv");
 extern "C" jobject AddIndirectReference(void*, uint32_t, void*)
 										__asm__("AddIndirectReference");
 
-// The gadget to remove an object from the designated indirect reference table.
+// The gadget to remove a reference from the designated indirect reference table.
 // Note that the first argument is the pointer to art::IndirectReferenceTable.
 extern "C" bool RemoveIndirectRefernce(void*, uint32_t, jobject)
 										__asm__("RemoveIndirectRefernce");

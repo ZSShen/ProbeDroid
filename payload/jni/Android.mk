@@ -9,7 +9,7 @@ LOCAL_C_INCLUDES        +=  ../../common \
                             ./gadget
 
 LOCAL_SRC_FILES         :=  ../../common/utf.cc \
-                            ./arch/x86/gadget_x86.s \
+                            ./arch/x86/gadget-asm_x86.s \
                             hook.cc \
 
 LOCAL_CFLAGS            := -g -fexceptions
