@@ -171,6 +171,8 @@ bool Penetrator::LoadAnalysisModule()
                                               path_cache, class_loader);
     CHECK_AND_LOG_EXCEPTION(jvm_, env);
 
+    env->DeleteLocalRef(path_module);
+    env->DeleteLocalRef(path_cache);
     jvm_->DetachCurrentThread();
     return HOOK_SUCCESS;
 }

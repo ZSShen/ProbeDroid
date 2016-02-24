@@ -26,4 +26,13 @@ static const char kSigFloat = 'F';
 static const char kSigDouble = 'D';
 static const char kSigArray = '[';
 
+
+// Cache some critical C++ function signatures exported from libart.
+static const char* kIndirectReferneceTableAdd =
+                    "_ZN3art22IndirectReferenceTable3AddEjPNS_6mirror6ObjectE";
+static const char* kIndirectReferenceTableRemove =
+                    "_ZN3art22IndirectReferenceTable6RemoveEjPv";
+static const char* kThreadDecodeJObject =
+                    "_ZNK3art6Thread13DecodeJObjectEP8_jobject";
+
 #endif
