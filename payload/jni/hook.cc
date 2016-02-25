@@ -6,6 +6,7 @@
 #include "hook.h"
 #include "gadget.h"
 #include "signature.h"
+#include "mirror/art_method-inl.h"
 
 
 namespace hook {
@@ -23,7 +24,7 @@ namespace hook {
 
 
 // TODO: A more fine-grained approach is needed instead of this simple logd spew.
-void Penetrator::LogJNIException(JNIEnv* env, jthrowable except)
+void Bootstrap::LogJNIException(JNIEnv* env, jthrowable except)
 {
     jclass clazz = env->FindClass(kNormObject);
     if (env->ExceptionCheck()) {
@@ -51,7 +52,7 @@ void Penetrator::LogJNIException(JNIEnv* env, jthrowable except)
     LOGD("%s\n", cstr);
 }
 
-bool Penetrator::CraftAnalysisModulePath()
+bool Bootstrap::CraftAnalysisModulePath()
 {
     char buf[kBlahSizeMid];
     sprintf(buf, "/proc/self/maps");
@@ -90,7 +91,7 @@ bool Penetrator::CraftAnalysisModulePath()
     return HOOK_FAILURE;
 }
 
-bool Penetrator::CraftDexPrivatePath()
+bool Bootstrap::CraftDexPrivatePath()
 {
     char buf[kBlahSizeMid];
     sprintf(buf, "/proc/self/cmdline");
@@ -111,7 +112,7 @@ bool Penetrator::CraftDexPrivatePath()
     return HOOK_FAILURE;
 }
 
-bool Penetrator::CreateDexPrivateDir()
+bool Bootstrap::CreateDexPrivateDir()
 {
     struct stat stat_buf;
     if (stat(dex_path_.get(), &stat_buf) == 0) {
@@ -125,59 +126,59 @@ bool Penetrator::CreateDexPrivateDir()
            HOOK_SUCCESS : HOOK_FAILURE;
 }
 
-bool Penetrator::CacheJVM()
+bool Bootstrap::CacheJVM()
 {
     JNIEnv *env;
     // Apply the manually crafted assembly gadget to get the JNIEnv* handle.
     GetJniEnv(&env);
     // Apply the Android JNI to get the JVM handle.
-    return (env->GetJavaVM(&jvm_) == JNI_OK)? HOOK_SUCCESS : HOOK_FAILURE;
+    return (env->GetJavaVM(&g_jvm) == JNI_OK)? HOOK_SUCCESS : HOOK_FAILURE;
 }
 
-bool Penetrator::LoadAnalysisModule()
+bool Bootstrap::LoadAnalysisModule()
 {
     JNIEnv* env;
-    jvm_->AttachCurrentThread(&env, nullptr);
+    g_jvm->AttachCurrentThread(&env, nullptr);
 
     char sig[kBlahSizeMid];
     jthrowable except;
     // Resolve "static ClassLoader ClassLoader.getSystemClassLoader()".
     jclass clazz = env->FindClass(kNormClassLoader);
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
     snprintf(sig, kBlahSizeMid, "()%s", kSigClassLoader);
     jmethodID meth = env->GetStaticMethodID(clazz, kFuncGetSystemClassLoader, sig);
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     // Get "java.lang.ClassLoader".
     jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     // Resolve "DexClassLoader.DexClassLoader(String, String, String, ClassLoader)"
     clazz = env->FindClass(kNormDexClassLoader);
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
     snprintf(sig, kBlahSizeMid, "(%s%s%s%s)V", kSigString, kSigString,
              kSigString, kSigClassLoader);
     meth = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     // Convert the pathname strings to UTF format.
     jstring path_module = env->NewStringUTF(module_path_);
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
     jstring path_cache = env->NewStringUTF(dex_path_.get());
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     // Create the custom "dalvik.system.DexClassLoader".
     jobject dex_class_loader = env->NewObject(clazz, meth, path_module, path_cache,
                                               path_cache, class_loader);
-    CHECK_AND_LOG_EXCEPTION(jvm_, env);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     env->DeleteLocalRef(path_module);
     env->DeleteLocalRef(path_cache);
-    jvm_->DetachCurrentThread();
+    g_jvm->DetachCurrentThread();
     return HOOK_SUCCESS;
 }
 
-bool Penetrator::ResolveArtSymbol()
+bool Bootstrap::ResolveArtSymbol()
 {
     handle_.reset(dlopen(kPathLibArt, RTLD_LAZY));
     if (!handle_.get())
@@ -194,31 +195,60 @@ bool Penetrator::ResolveArtSymbol()
     return HOOK_SUCCESS;
 }
 
+bool Bootstrap::DeployHookGadgetCompiler()
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+
+    char sig[kBlahSizeMid];
+    jthrowable except;
+    // Resolve "Class ClassLoader.loadClass(String)".
+    jclass clazz = env->FindClass(kNormClassLoader);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+    snprintf(sig, kBlahSizeMid, "(%s)%s", kSigString, kSigClass);
+    jmethodID meth = env->GetMethodID(clazz, kFuncLoadClass, sig);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+
+    // Change the entry point to the quick-compiled code of "loadClass()" to our
+    // hooking gadget compiler. So when the first component of the instrumented
+    // application "android.app.Application" is ready to be loaded, the program
+    // flow will be diverted to our compiler. At that time, since the ClassLoader
+    // for the instrumented application is ready, we can freely hook the
+    // application defined methods or Android/Java APIs.
+    art::ArtMethod *art_meth = reinterpret_cast<art::ArtMethod*>(meth);
+    uint64_t entry = art::ArtMethod::GetEntryPointFromQuickCompiledCode(art_meth);
+    g_load_class_quick_compiled = reinterpret_cast<void*>(entry);
+    entry = reinterpret_cast<uint64_t>(CompileHookGadgetTrampoline);
+    art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry);
+
+    return HOOK_SUCCESS;
+}
+
 }
 
 void __attribute__((constructor)) HookEntry()
 {
-    LOGD("\n\nHook success, pid = %d\n\n", getpid());
+    LOGD("\n\nHook Bootstrapping, pid = %d\n\n", getpid());
 
-    hook::Penetrator penetrator;
+    hook::Bootstrap bootstrap;
     // Generate the pathnames required by Android DexClassLoader to dynamically
     // load our instrumentation module.
-    if (penetrator.CraftAnalysisModulePath() != hook::HOOK_SUCCESS)
+    if (bootstrap.CraftAnalysisModulePath() != hook::HOOK_SUCCESS)
         return;
-    if (penetrator.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
+    if (bootstrap.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
         return;
-    if (penetrator.CreateDexPrivateDir() != hook::HOOK_SUCCESS)
+    if (bootstrap.CreateDexPrivateDir() != hook::HOOK_SUCCESS)
         return;
 
     // Retrieve the JVM handle which is necessary for the JNI interaction later.
-    if (penetrator.CacheJVM() != hook::HOOK_SUCCESS)
+    if (bootstrap.CacheJVM() != hook::HOOK_SUCCESS)
         return;
 
     // Load our instrumentation module.
     // To avoid the ANR, we create a worker thread to offload the task bound to
     // the main thread. Note that this is just a work around, more stable
     // approach is needed.
-    auto func = std::bind(&hook::Penetrator::LoadAnalysisModule, &penetrator);
+    auto func = std::bind(&hook::Bootstrap::LoadAnalysisModule, &bootstrap);
     std::packaged_task<bool()> task(func);
     std::future<bool> future = task.get_future();
     std::thread thread(std::move(task));
@@ -226,8 +256,11 @@ void __attribute__((constructor)) HookEntry()
     if (future.get() != hook::HOOK_SUCCESS)
         return;
 
-    // Resolve the entry points of some critial libart functions which are
+    // Resolve the entry points of some critical libart functions which are
     // used for native code resource management.
-    if (penetrator.ResolveArtSymbol() != hook::HOOK_SUCCESS)
+    if (bootstrap.ResolveArtSymbol() != hook::HOOK_SUCCESS)
+        return;
+
+    if (bootstrap.DeployHookGadgetCompiler() != hook::HOOK_SUCCESS)
         return;
 }

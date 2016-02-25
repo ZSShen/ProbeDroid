@@ -10,10 +10,12 @@ static const char* kNormObject = "java/lang/Object";
 static const char* kFuncConstructor = "<init>";
 static const char* kFuncGetSystemClassLoader = "getSystemClassLoader";
 static const char* kFuncToString = "toString";
+static const char* kFuncLoadClass = "loadClass";
 
 static const char* kSigClassLoader = "Ljava/lang/ClassLoader;";
 static const char* kSigDexClassLoader = "Ldalvik/system/DexClassLoader;";
 static const char* kSigString = "Ljava/lang/String;";
+static const char* kSigClass = "Ljava/lang/Class;";
 
 static const char kSigVoid = 'V';
 static const char kSigBoolean = 'Z';

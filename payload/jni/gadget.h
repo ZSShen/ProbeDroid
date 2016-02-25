@@ -3,9 +3,7 @@
 
 
 #include <jni.h>
-
-
-typedef void (*OriginalCall) ();
+#include <cstdint>
 
 
 // The gadget to extract JNI handle from TLS.
@@ -18,20 +16,35 @@ extern "C" jobject AddIndirectReference(void*, uint32_t, void*)
 
 // The gadget to remove a reference from the designated indirect reference table.
 // Note that the first argument is the pointer to art::IndirectReferenceTable.
-extern "C" bool RemoveIndirectRefernce(void*, uint32_t, jobject)
-										__asm__("RemoveIndirectRefernce");
+extern "C" bool RemoveIndirectReference(void*, uint32_t, jobject)
+										__asm__("RemoveIndirectReference");
 
 // The gadget to decode the given indirect reference.
 // Note that the first argument is the pointer to art::Thread.
 extern "C" void* DecodeJObject(void*, jobject) __asm__("DecodeJObject");
 
+// The trampoline to the hook gadget compiler.
+extern "C" void* CompileHookGadgetTrampoline()
+										__asm__("CompileHookGadgetTrampoline");
+
+// The compiler which sets all the hooking gadgets towards user designated
+// Java methods for instrumentation.
+extern "C" void* CompileHookGadget(void*, void*, void*, void*, void*);
+
+
+// The cached Java VM handle.
+extern JavaVM* g_jvm;
+
 // The original entry to IndirectReferenceTable::Add().
-void* g_indirect_reference_table_add;
+extern void* g_indirect_reference_table_add;
 
 // The original entry to IndirectReferneceTable::Remove().
-void* g_indirect_reference_table_remove;
+extern void* g_indirect_reference_table_remove;
 
 // The original entry to Thread::DecodeJObject().
-void* g_thread_decode_jobject;
+extern void* g_thread_decode_jobject;
+
+// The original entry to the loadClass() quick compiled code.
+extern void* g_load_class_quick_compiled;
 
 #endif

@@ -14,10 +14,10 @@ enum {
     HOOK_FAILURE = 1
 };
 
-class Penetrator
+class Bootstrap
 {
   public:
-    Penetrator()
+    Bootstrap()
       : module_path_(nullptr),
         dex_path_(nullptr),
         handle_(nullptr)
@@ -29,6 +29,7 @@ class Penetrator
     bool CacheJVM();
     bool LoadAnalysisModule();
     bool ResolveArtSymbol();
+    bool DeployHookGadgetCompiler();
 
   private:
     void LogJNIException(JNIEnv*, jthrowable);
