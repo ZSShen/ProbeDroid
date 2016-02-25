@@ -12,12 +12,12 @@ extern "C" void GetJniEnv(JNIEnv**) __asm__("GetJniEnv");
 // The gadget to insert an object into the designated indirect reference table.
 // Note that the first argument is the pointer to art::IndirectReferenceTable.
 extern "C" jobject AddIndirectReference(void*, uint32_t, void*)
-										__asm__("AddIndirectReference");
+                                        __asm__("AddIndirectReference");
 
 // The gadget to remove a reference from the designated indirect reference table.
 // Note that the first argument is the pointer to art::IndirectReferenceTable.
 extern "C" bool RemoveIndirectReference(void*, uint32_t, jobject)
-										__asm__("RemoveIndirectReference");
+                                        __asm__("RemoveIndirectReference");
 
 // The gadget to decode the given indirect reference.
 // Note that the first argument is the pointer to art::Thread.
@@ -25,7 +25,7 @@ extern "C" void* DecodeJObject(void*, jobject) __asm__("DecodeJObject");
 
 // The trampoline to the hook gadget compiler.
 extern "C" void* CompileHookGadgetTrampoline()
-										__asm__("CompileHookGadgetTrampoline");
+                                        __asm__("CompileHookGadgetTrampoline");
 
 // The compiler which sets all the hooking gadgets towards user designated
 // Java methods for instrumentation.

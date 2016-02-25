@@ -6,15 +6,15 @@
 
 
 void* CompileHookGadget(void *obj, void *meth, void *arg_first,
-						void *arg_second, void *stk_ptr)
+                        void *arg_second, void *stk_ptr)
 {
-	JNIEnv* env;
-	g_jvm->AttachCurrentThread(&env, nullptr);
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
 
-	JNIEnvExt* env_ext = reinterpret_cast<JNIEnvExt*>(env);
+    JNIEnvExt* env_ext = reinterpret_cast<JNIEnvExt*>(env);
     uint32_t cookie = env_ext->local_ref_cookie_;
     IndirectReferenceTable* ref_table = reinterpret_cast<IndirectReferenceTable*>
-    									(&(env_ext->local_refs_table_));
+                                        (&(env_ext->local_refs_table_));
     void* thread = env_ext->thread_;
 
     jobject ref_obj = AddIndirectReference(ref_table, cookie, obj);
@@ -33,5 +33,5 @@ void* CompileHookGadget(void *obj, void *meth, void *arg_first,
     RemoveIndirectReference(ref_table, cookie, ref_res);
 
     LOGD("Success");
-	return res;
+    return res;
 }
