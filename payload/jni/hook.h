@@ -4,6 +4,8 @@
 
 #include <jni.h>
 
+#include "scoped_dl.h"
+
 
 namespace hook {
 
@@ -17,7 +19,8 @@ class Penetrator
   public:
     Penetrator()
       : module_path_(nullptr),
-        dex_path_(nullptr)
+        dex_path_(nullptr),
+        handle_(nullptr)
     {}
 
     bool CraftAnalysisModulePath();
@@ -25,6 +28,7 @@ class Penetrator
     bool CreateDexPrivateDir();
     bool CacheJVM();
     bool LoadAnalysisModule();
+    bool ResolveArtSymbol();
 
   private:
     void LogJNIException(JNIEnv*, jthrowable);
@@ -32,12 +36,14 @@ class Penetrator
     static constexpr int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
     static constexpr const char* kDirDexData = "data";
     static constexpr const char* kDirInstrument = "instrument";
+    static constexpr const char* kPathLibArt = "/system/lib/libart.so";
     static constexpr const char* kRecursiveExcept = "Exception occurs during "
                                                 "exception message processing.";
 
     char* module_path_;
     std::unique_ptr<char> dex_path_;
     JavaVM* jvm_;
+    ScopedDl handle_;
 };
 
 }

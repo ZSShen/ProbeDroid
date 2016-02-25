@@ -177,6 +177,23 @@ bool Penetrator::LoadAnalysisModule()
     return HOOK_SUCCESS;
 }
 
+bool Penetrator::ResolveArtSymbol()
+{
+    handle_.reset(dlopen(kPathLibArt, RTLD_LAZY));
+    if (!handle_.get())
+        return HOOK_FAILURE;
+    g_indirect_reference_table_add = handle_.resolve(kIndirectReferneceTableAdd);
+    if (!g_indirect_reference_table_add)
+        return HOOK_FAILURE;
+    g_indirect_reference_table_remove = handle_.resolve(kIndirectReferenceTableRemove);
+    if (!g_indirect_reference_table_remove)
+        return HOOK_FAILURE;
+    g_thread_decode_jobject = handle_.resolve(kThreadDecodeJObject);
+    if (!g_thread_decode_jobject)
+        return HOOK_FAILURE;
+    return HOOK_SUCCESS;
+}
+
 }
 
 void __attribute__((constructor)) HookEntry()
@@ -207,5 +224,10 @@ void __attribute__((constructor)) HookEntry()
     std::thread thread(std::move(task));
     thread.join();
     if (future.get() != hook::HOOK_SUCCESS)
+        return;
+
+    // Resolve the entry points of some critial libart functions which are
+    // used for native code resource management.
+    if (penetrator.ResolveArtSymbol() != hook::HOOK_SUCCESS)
         return;
 }
