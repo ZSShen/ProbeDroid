@@ -213,8 +213,9 @@ bool Bootstrap::DeployHookGadgetCompiler()
     // hooking gadget compiler. So when the first component of the instrumented
     // application "android.app.Application" is ready to be loaded, the program
     // flow will be diverted to our compiler. At that time, since the ClassLoader
-    // for the instrumented application is ready, we can freely hook the
-    // application defined methods or Android/Java APIs.
+    // for the instrumented application is ready, we can freely pre-load the
+    // application defined classes or methods which we interest in, and also
+    // hook the application defined methods or Android/Java APIs.
     art::ArtMethod *art_meth = reinterpret_cast<art::ArtMethod*>(meth);
     uint64_t entry = art::ArtMethod::GetEntryPointFromQuickCompiledCode(art_meth);
     g_load_class_quick_compiled = reinterpret_cast<void*>(entry);
@@ -256,11 +257,15 @@ void __attribute__((constructor)) HookEntry()
     if (future.get() != hook::HOOK_SUCCESS)
         return;
 
-    // Resolve the entry points of some critical libart functions which are
+    // Resolve the entry points of some critical libart functions which would be
     // used for native code resource management.
     if (bootstrap.ResolveArtSymbol() != hook::HOOK_SUCCESS)
         return;
 
+    // Deploy the hooking gadget compiler and finish the bootstrap process.
+    // The control flow of the instrumented application will be diverted to
+    // the compiler when "Class ClassLoader.loadClass(String)" is about to be
+    // used to load the first application component "android.app.Application".
     if (bootstrap.DeployHookGadgetCompiler() != hook::HOOK_SUCCESS)
         return;
 }
