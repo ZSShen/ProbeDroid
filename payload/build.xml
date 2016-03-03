@@ -9,7 +9,7 @@
     </target>
 
     <target name="jni-header">
-        <javah destdir="jni" force="yes" classpath="bin"
+        <javah destdir="jni/bridge" force="yes" classpath="bin"
             class="org.probedroid.Instrument"/>
     </target>
 
