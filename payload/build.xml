@@ -1,0 +1,19 @@
+<project>
+    <target name="clean">
+        <delete dir="bin"/>
+    </target>
+
+    <target name="compile">
+        <mkdir dir="bin"/>
+        <javac srcdir="src" destdir="bin" includeantruntime="false"/>
+    </target>
+
+    <target name="jni-header">
+        <javah destdir="jni" force="yes" classpath="bin"
+            class="org.probedroid.Instrument"/>
+    </target>
+
+    <target name="build-jar">
+        <jar destfile="ProbeDroid.jar" basedir="bin"/>
+    </target>
+</project>

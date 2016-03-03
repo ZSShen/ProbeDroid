@@ -43,7 +43,6 @@ class Bootstrap
 
     char* module_path_;
     std::unique_ptr<char> dex_path_;
-    JavaVM* jvm_;
     ScopedDl handle_;
 };
 
