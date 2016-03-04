@@ -123,14 +123,14 @@ DecodeJObject:
     ret
 
 
-.global CompileHookGadgetTrampoline
-.type CompileHookGadgetTrampoline, @function
-CompileHookGadgetTrampoline:
+.global ComposeInstrumentGadgetTrampoline
+.type ComposeInstrumentGadgetTrampoline, @function
+ComposeInstrumentGadgetTrampoline:
     push %esp               # The stack pointer
     push %ebx               # The second argument
     push %edx               # The first argument
     push %eax               # The ArtMethod* pointer
     push %ecx               # The receiver pointer
-    call CompileHookGadget
+    call ComposeInstrumentGadget
     addl $20, %esp
     ret

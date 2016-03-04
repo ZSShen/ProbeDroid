@@ -195,7 +195,7 @@ bool Bootstrap::ResolveArtSymbol()
     return HOOK_SUCCESS;
 }
 
-bool Bootstrap::DeployHookGadgetCompiler()
+bool Bootstrap::DeployInstrumentGadgetComposer()
 {
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
@@ -209,17 +209,17 @@ bool Bootstrap::DeployHookGadgetCompiler()
     jmethodID meth = env->GetMethodID(clazz, kFuncLoadClass, sig);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
-    // Change the entry point to the quick-compiled code of "loadClass()" to our
-    // hooking gadget compiler. So when the first component of the instrumented
-    // application "android.app.Application" is ready to be loaded, the program
-    // flow will be diverted to our compiler. At that time, since the ClassLoader
-    // for the instrumented application is ready, we can freely pre-load the
-    // application defined classes or methods which we interest in, and also
-    // hook the application defined methods or Android/Java APIs.
+    // Change the entry point to the quick-compiled code of "loadClass()" to the
+    // trampoline of the instrument gadget composer. So when the first component
+    // of the instrumented application "android.app.Application" is ready to be
+    // loaded, the program flow will be diverted to the composer. At that time,
+    // the ClassLoader for the instrumented application is ready, and we can freely
+    // pre-load the application defined classes or methods which we interest in,
+    // and also instrument the application defined methods or Android/Java APIs.
     art::ArtMethod *art_meth = reinterpret_cast<art::ArtMethod*>(meth);
     uint64_t entry = art::ArtMethod::GetEntryPointFromQuickCompiledCode(art_meth);
     g_load_class_quick_compiled = reinterpret_cast<void*>(entry);
-    entry = reinterpret_cast<uint64_t>(CompileHookGadgetTrampoline);
+    entry = reinterpret_cast<uint64_t>(ComposeInstrumentGadgetTrampoline);
     art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry);
 
     return HOOK_SUCCESS;
@@ -262,10 +262,10 @@ void __attribute__((constructor)) HookEntry()
     if (bootstrap.ResolveArtSymbol() != hook::HOOK_SUCCESS)
         return;
 
-    // Deploy the hooking gadget compiler and finish the bootstrap process.
+    // Deploy the hooking gadget composer and finish the bootstrap process.
     // The control flow of the instrumented application will be diverted to
-    // the compiler when "Class ClassLoader.loadClass(String)" is about to be
-    // used to load the first application component "android.app.Application".
-    if (bootstrap.DeployHookGadgetCompiler() != hook::HOOK_SUCCESS)
+    // the composer when "Class ClassLoader.loadClass(String)" is about to be
+    // called to load the first application component "android.app.Application".
+    if (bootstrap.DeployInstrumentGadgetComposer() != hook::HOOK_SUCCESS)
         return;
 }

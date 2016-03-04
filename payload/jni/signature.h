@@ -26,8 +26,35 @@ static const char kSigInt = 'I';
 static const char kSigLong = 'J';
 static const char kSigFloat = 'F';
 static const char kSigDouble = 'D';
+static const char kSigObject = 'L';
 static const char kSigArray = '[';
 
+static const char kTypeVoid = 0;
+static const char kTypeBoolean = 1;
+static const char kTypeByte = 2;
+static const char kTypeChar = 3;
+static const char kTypeShort = 4;
+static const char kTypeInt = 5;
+static const char kTypeLong = 6;
+static const char kTypeFloat = 7;
+static const char kTypeDouble = 8;
+static const char kTypeObject = 9;
+static const char kTypeArray = 16;
+
+// Cache some critical signatures used in our ProbeDroid SDK.
+static const char* kNormInstrument = "org/probedroid/Instrument";
+
+static const char* kFuncPrepareNativeBridge = "prepareNativeBridge";
+static const char* kFuncOnApplicationStart = "onApplicationStart";
+static const char* kFuncOnApplicationStop = "onApplicationStop";
+static const char* kFuncBeforeMethodExecute = "beforeMethodExecute";
+static const char* kFuncAfterMethodExecute = "afterMethodExecute";
+
+static const char* kSigPrepareNativeBridge = "(Ljava/lang/String;)V";
+static const char* kSigOnApplicationStart = "()V";
+static const char* kSigOnApplicationStop = "()V";
+static const char* kSigBeforeMethodExecute = "([Ljava/lang/Object;)V";
+static const char* kSigAfterMethodExecute = "(Ljava/lang/Object;)V";
 
 // Cache some critical C++ function signatures exported from libart.
 static const char* kIndirectReferneceTableAdd =

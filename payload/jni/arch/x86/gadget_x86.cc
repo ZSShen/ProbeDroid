@@ -5,7 +5,7 @@
 #include "logcat.h"
 
 
-void* CompileHookGadget(void *obj, void *meth, void *arg_first,
+void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
                         void *arg_second, void *stk_ptr)
 {
     JNIEnv* env;
@@ -25,7 +25,7 @@ void* CompileHookGadget(void *obj, void *meth, void *arg_first,
     jobject ref_obj = AddIndirectReference(ref_table, cookie, obj);
     jobject ref_arg_first = AddIndirectReference(ref_table, cookie, arg_first);
 
-    // The main logic of the hooking gadget compiler.
+    // The main logic of the hooking gadget composer.
     //          *** will be updated later ***
 
     // Restore the entry point to the quick compiled code of "loadClass()".

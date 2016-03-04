@@ -23,13 +23,13 @@ extern "C" bool RemoveIndirectReference(void*, uint32_t, jobject)
 // Note that the first argument is the pointer to art::Thread.
 extern "C" void* DecodeJObject(void*, jobject) __asm__("DecodeJObject");
 
-// The trampoline to the hook gadget compiler.
-extern "C" void* CompileHookGadgetTrampoline()
-                                        __asm__("CompileHookGadgetTrampoline");
+// The trampoline to the function to set instrument gadget composer.
+extern "C" void* ComposeInstrumentGadgetTrampoline()
+                                        __asm__("ComposeInstrumentGadgetTrampoline");
 
-// The compiler which sets all the hooking gadgets towards user designated
-// Java methods for instrumentation.
-extern "C" void* CompileHookGadget(void*, void*, void*, void*, void*);
+// The function which launches the composer that will set all the instrument
+// gadgets towards user designated Java methods for instrumentation.
+extern "C" void* ComposeInstrumentGadget(void*, void*, void*, void*, void*);
 
 
 // The cached Java VM handle.

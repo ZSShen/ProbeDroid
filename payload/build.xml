@@ -5,7 +5,10 @@
 
     <target name="compile">
         <mkdir dir="bin"/>
-        <javac srcdir="src" destdir="bin" includeantruntime="false"/>
+        <javac target="1.7" source="1.7" srcdir="src" destdir="bin"
+            includeantruntime="false">
+            <compilerarg value="-Xlint:-options"/>
+        </javac>
     </target>
 
     <target name="jni-header">

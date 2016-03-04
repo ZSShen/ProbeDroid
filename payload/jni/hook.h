@@ -29,7 +29,7 @@ class Bootstrap
     bool CacheJVM();
     bool LoadAnalysisModule();
     bool ResolveArtSymbol();
-    bool DeployHookGadgetCompiler();
+    bool DeployInstrumentGadgetComposer();
 
   private:
     void LogJNIException(JNIEnv*, jthrowable);
