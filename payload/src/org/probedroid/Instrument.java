@@ -7,15 +7,16 @@ public abstract class Instrument {
         System.load(pathLib);
     }
 
-    public static void hookMethod(String nameClass, String nameMethod,
+    public void instrumentMethod(String nameClass, String nameMethod,
             String signatureMethod, MethodBundle bundle)
             throws ClassNotFoundException, NoSuchMethodException {
     }
 
     public abstract void onApplicationStart();
+
     public abstract void onApplicationStop();
 
-    private static native void hookMethodNative(String nameClass,
+    private native void instrumentMethodNative(String nameClass,
             String nameMethod, String signatureMethod, MethodBundle bundle)
             throws ClassNotFoundException, NoSuchMethodException;
 }

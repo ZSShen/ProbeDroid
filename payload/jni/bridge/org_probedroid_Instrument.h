@@ -9,11 +9,11 @@ extern "C" {
 #endif
 /*
  * Class:     org_probedroid_Instrument
- * Method:    hookMethodNative
+ * Method:    instrumentMethodNative
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/probedroid/support/MethodBundle;)V
  */
-JNIEXPORT void JNICALL Java_org_probedroid_Instrument_hookMethodNative
-  (JNIEnv *, jclass, jstring, jstring, jstring, jobject);
+JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
+  (JNIEnv *, jobject, jstring, jstring, jstring, jobject);
 
 #ifdef __cplusplus
 }
