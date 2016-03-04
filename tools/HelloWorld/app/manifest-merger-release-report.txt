@@ -1,0 +1,33 @@
+-- Merging decision tree log ---
+manifest
+ADDED from AndroidManifest.xml:1:1
+	package
+		ADDED from AndroidManifest.xml:2:11
+		INJECTED from AndroidManifest.xml:0:0
+		INJECTED from AndroidManifest.xml:0:0
+	android:versionName
+		INJECTED from AndroidManifest.xml:0:0
+		INJECTED from AndroidManifest.xml:0:0
+	xmlns:android
+		ADDED from AndroidManifest.xml:1:11
+	android:versionCode
+		INJECTED from AndroidManifest.xml:0:0
+		INJECTED from AndroidManifest.xml:0:0
+application
+ADDED from AndroidManifest.xml:4:5
+	android:label
+		ADDED from AndroidManifest.xml:5:18
+	android:allowBackup
+		ADDED from AndroidManifest.xml:4:18
+	android:icon
+		ADDED from AndroidManifest.xml:6:18
+	android:theme
+		ADDED from AndroidManifest.xml:7:18
+uses-sdk
+INJECTED from AndroidManifest.xml:0:0 reason: use-sdk injection requested
+	android:targetSdkVersion
+		INJECTED from AndroidManifest.xml:0:0
+		INJECTED from AndroidManifest.xml:0:0
+	android:minSdkVersion
+		INJECTED from AndroidManifest.xml:0:0
+		INJECTED from AndroidManifest.xml:0:0
