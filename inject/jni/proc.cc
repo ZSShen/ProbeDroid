@@ -7,11 +7,11 @@
 
 namespace proc {
 
-static const char* kPathLinker      = "/system/bin/linker";
-static const char* kPathLibc        = "/system/lib/libc.so";
-static const char* kNameLinker      = "libdl.so";
-static const char* kFuncDlopen      = "dlopen";
-static const char* kFuncMmap        = "mmap";
+static const char* kPathLinker = "/system/bin/linker";
+static const char* kPathLibc = "/system/lib/libc.so";
+static const char* kNameLinker = "libdl.so";
+static const char* kFuncDlopen = "dlopen";
+static const char* kFuncMmap = "mmap";
 
 
 #define LOG_SYSERR_AND_THROW()                                                 \
@@ -200,7 +200,8 @@ bool EggHunter::CaptureApp(pid_t pid_zygote, const char* app_name)
     return rtn;
 }
 
-bool EggHunter::InjectApp(const char* lib_path, const char* module_path)
+bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
+                          const char* class_name)
 {
     pid_t pid_inject = getpid();
 
@@ -333,15 +334,12 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path)
 }
 
 void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_path,
-                     const char* module_path)
+                     const char* module_path, const char* class_name)
 {
     if (CaptureApp(pid_zygote, app_name) != PROC_SUCCESS)
         return;
-    if (InjectApp(lib_path, module_path) != PROC_SUCCESS)
+    if (InjectApp(lib_path, module_path, class_name) != PROC_SUCCESS)
         return;
-
-    // TODO: A scanning towards /proc/pid/maps is required to confirm this
-    // tip message.
     TIP() << StringPrintf("[+] %s is successfully injected.\n", lib_path);
 }
 
