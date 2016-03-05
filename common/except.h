@@ -1,5 +1,5 @@
-#ifndef _UTIL_EXCEPT_H_
-#define _UTIL_EXCEPT_H_
+#ifndef _EXCEPT_H_
+#define _EXCEPT_H_
 
 
 class BadProbe : public std::exception

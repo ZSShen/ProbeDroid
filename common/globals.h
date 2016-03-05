@@ -1,5 +1,5 @@
-#ifndef _UTIL_GLOBALS_H_
-#define _UTIL_GLOBALS_H_
+#ifndef _GLOBALS_H_
+#define _GLOBALS_H_
 
 
 #include <cstdint>
@@ -9,17 +9,17 @@ typedef uint8_t byte;
 typedef intptr_t word;
 typedef uintptr_t uword;
 
-static constexpr size_t KB = 1024;
-static constexpr size_t MB = KB * KB;
-static constexpr size_t GB = KB * KB * KB;
+static const size_t KB = 1024;
+static const size_t MB = KB * KB;
+static const size_t GB = KB * KB * KB;
 
 // System page size.
-static constexpr int kPageSize = 4096;
+static const int kPageSize = 4096;
 
 // Auxiliary buffer size.
-static constexpr int kBlahSize = 1024;
-static constexpr int kBlahSizeMid = 512;
-static constexpr int kBlahSizeTiny = 128;
+static const int kBlahSize = 1024;
+static const int kBlahSizeMid = 512;
+static const int kBlahSizeTiny = 128;
 
 // Auxiliary symbols for inter-process communication.
 static const char kSignAssign = '=';

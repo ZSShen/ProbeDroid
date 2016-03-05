@@ -12,50 +12,10 @@
 #include "gadget.h"
 #include "signature.h"
 #include "mirror/art_method-inl.h"
+#include "jni_except-inl.h"
 
 
 namespace hook {
-
-#define CHECK_AND_LOG_EXCEPTION(jvm, env)                                      \
-        do {                                                                   \
-            jthrowable except;                                                 \
-            if ((except = env->ExceptionOccurred())) {                         \
-                env->ExceptionClear();                                         \
-                LogJNIException(env, except);                                  \
-                jvm->DetachCurrentThread();                                    \
-                return HOOK_FAILURE;                                           \
-            }                                                                  \
-        } while (0);                                                           \
-
-
-// TODO: A more fine-grained approach is needed instead of this simple logd spew.
-void Bootstrap::LogJNIException(JNIEnv* env, jthrowable except)
-{
-    jclass clazz = env->FindClass(kNormObject);
-    if (env->ExceptionCheck()) {
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
-    char sig[kBlahSizeMid];
-    snprintf(sig, kBlahSizeMid, "()%s", kSigString);
-    jmethodID meth = env->GetMethodID(clazz, kFuncToString, sig);
-    if (env->ExceptionCheck()) {
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
-    jstring str = reinterpret_cast<jstring>(env->CallObjectMethod(except, meth));
-    if (env->ExceptionCheck()) {
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
-    jboolean is_copy = false;
-    const char* cstr = env->GetStringUTFChars(str, &is_copy);
-    if (env->ExceptionCheck()) {
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
-    LOGD("%s\n", cstr);
-}
 
 bool Bootstrap::ResolveInjectorDeliveredSymbols()
 {

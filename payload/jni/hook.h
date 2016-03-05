@@ -32,14 +32,10 @@ class Bootstrap
     bool DeployInstrumentGadgetComposer();
 
   private:
-    void LogJNIException(JNIEnv*, jthrowable);
-
     static constexpr int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
     static constexpr const char* kDirDexData = "data";
     static constexpr const char* kDirInstrument = "instrument";
     static constexpr const char* kPathLibArt = "/system/lib/libart.so";
-    static constexpr const char* kRecursiveExcept = "Exception occurs during "
-                                                "exception message processing.";
 
     std::unique_ptr<char> dex_path_;
     ScopedDl handle_;
