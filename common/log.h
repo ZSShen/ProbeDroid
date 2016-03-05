@@ -18,7 +18,9 @@
 #define _UTIL_LOG_H_
 
 
-#include "globals.h"
+#include <memory>
+#include <sstream>
+
 #include "macros.h"
 
 

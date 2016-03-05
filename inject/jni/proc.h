@@ -2,14 +2,9 @@
 #define _PROC_H_
 
 
+#include <sys/types.h>
+
 #include "globals.h"
-#include "sys/wait.h"
-#include "sys/syscall.h"
-#include "sys/ptrace.h"
-#include "sys/types.h"
-#include "sys/stat.h"
-#include "sys/user.h"
-#include "sys/mman.h"
 
 
 namespace proc {
@@ -70,12 +65,6 @@ class EggHunter
     void CheckStartupCmd(const char*);
     bool PokeTextInApp(uintptr_t, const char*, size_t);
     bool PeekTextInApp(uintptr_t, char*, size_t);
-
-    static constexpr const char* kPathLinker = "/system/bin/linker";
-    static constexpr const char* kPathLibc = "/system/lib/libc.so";
-    static constexpr const char* kNameLinker = "libdl.so";
-    static constexpr const char* kFuncDlopen = "dlopen";
-    static constexpr const char* kFuncMmap = "mmap";
 
     pid_t pid_app_;
     FunctionTable func_tbl_;

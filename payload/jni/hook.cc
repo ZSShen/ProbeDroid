@@ -1,5 +1,10 @@
+#include <iostream>
+#include <iomanip>
+#include <iosfwd>
+#include <fstream>
 #include <thread>
 #include <future>
+#include <unistd.h>
 
 #include "globals.h"
 #include "logcat.h"

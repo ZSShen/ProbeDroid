@@ -15,6 +15,7 @@
  */
 
 #include "stringprintf.h"
+#include "globals.h"
 
 
 void StringAppendV(std::string* dst, const char* format, va_list ap)

@@ -18,6 +18,9 @@
 #define _UTIL_MACROS_H_
 
 
+#include <cstdint>
+
+
 // Fire a warning when programmers forget to use the return value from callee method.
 #define WARN_UNUSED __attribute__((warn_unused_result))
 

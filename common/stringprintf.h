@@ -18,7 +18,7 @@
 #define _UTIL_STRINGPRINTF_H_
 
 
-#include "globals.h"
+#include <string>
 
 
 // Returns a string corresponding to printf-like formatting of the arguments.

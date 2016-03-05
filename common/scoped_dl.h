@@ -2,6 +2,8 @@
 #define _UTIL_SCOPED_DL_H_
 
 
+#include <dlfcn.h>
+
 #include "globals.h"
 #include "macros.h"
 

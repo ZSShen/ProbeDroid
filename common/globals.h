@@ -2,33 +2,7 @@
 #define _UTIL_GLOBALS_H_
 
 
-#include <vector>
-#include <string>
-#include <memory>
-#include <algorithm>
-#include <utility>
-#include <iostream>
-#include <iomanip>
-#include <iosfwd>
-#include <sstream>
-#include <fstream>
-
-#include <stddef.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <stdarg.h>
-#include <string.h>
-#include <inttypes.h>
-#include <getopt.h>
-
-#include <unistd.h>
-#include <errno.h>
-#include <fcntl.h>
-#include <dlfcn.h>
-
-#include <sys/mman.h>
-#include <sys/types.h>
-#include <sys/stat.h>
+#include <cstdint>
 
 
 typedef uint8_t byte;

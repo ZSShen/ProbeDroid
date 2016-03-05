@@ -3,6 +3,7 @@
 
 
 #include <jni.h>
+#include <sys/stat.h>
 
 #include "scoped_dl.h"
 

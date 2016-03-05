@@ -1,3 +1,15 @@
+#include <cstdlib>
+#include <iostream>
+#include <iomanip>
+#include <iosfwd>
+#include <fstream>
+#include <unistd.h>
+#include <dlfcn.h>
+#include <sys/wait.h>
+#include <sys/syscall.h>
+#include <sys/ptrace.h>
+#include <sys/mman.h>
+
 #include "proc.h"
 #include "scoped_dl.h"
 #include "log.h"

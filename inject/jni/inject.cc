@@ -1,3 +1,8 @@
+#include <iostream>
+#include <cstdio>
+#include <cstdlib>
+#include <getopt.h>
+
 #include "globals.h"
 #include "proc.h"
 
