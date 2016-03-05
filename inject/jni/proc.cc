@@ -208,15 +208,26 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
     if (func_tbl_.Resolve(pid_inject, pid_app_) != PROC_SUCCESS)
         return PROC_FAILURE;
 
-    // Prepare the library and module pathnames. Zero padding is necessary to
-    // produce the text word recognized by ptrace().
+    // Prepare the library pathname for dlopen() and the key-value pairs for
+    // inter-process communication. Zero padding is necessary to produce the
+    // text word recognized by ptrace().
     char payload[kBlahSizeMid];
     size_t len_payload = strlen(lib_path);
     strncpy(payload, lib_path, kBlahSizeMid);
     payload[len_payload++] = 0;
 
     size_t append = snprintf(payload + len_payload, kBlahSizeMid - len_payload,
-                    "%s%c%s", kKeyPathAnalysisModule, kSignAssign, module_path);
+                             "%s%c%s", kKeyPathCoreLibrary, kSignAssign, lib_path);
+    len_payload += append;
+    payload[len_payload++] = 0;
+
+    append = snprintf(payload + len_payload, kBlahSizeMid - len_payload,
+                      "%s%c%s", kKeyPathAnalysisModule, kSignAssign, module_path);
+    len_payload += append;
+    payload[len_payload++] = 0;
+
+    append = snprintf(payload + len_payload, kBlahSizeMid - len_payload,
+                      "%s%c%s", kKeyNameMainClass, kSignAssign, class_name);
     len_payload += append;
     payload[len_payload++] = 0;
 

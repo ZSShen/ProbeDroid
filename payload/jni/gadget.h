@@ -6,6 +6,25 @@
 #include <cstdint>
 
 
+class InstrumentGadgetComposer
+{
+  public:
+    InstrumentGadgetComposer(JNIEnv *env, jobject ref_class_loader,
+                             jmethodID id_load_class)
+      : env_(env),
+        ref_class_loader_(ref_class_loader),
+        id_load_class_(id_load_class)
+    {}
+
+    void compose();
+
+  private:
+    JNIEnv* env_;
+    jobject ref_class_loader_;
+    jmethodID id_load_class_;
+};
+
+
 // The gadget to extract JNI handle from TLS.
 extern "C" void GetJniEnv(JNIEnv**) __asm__("GetJniEnv");
 
@@ -31,6 +50,11 @@ extern "C" void* ComposeInstrumentGadgetTrampoline()
 // gadgets towards user designated Java methods for instrumentation.
 extern "C" void* ComposeInstrumentGadget(void*, void*, void*, void*, void*);
 
+
+// The cached symbols delivered from injector.
+extern char* g_module_path;
+extern char* g_lib_path;
+extern char* g_class_name;
 
 // The cached Java VM handle.
 extern JavaVM* g_jvm;

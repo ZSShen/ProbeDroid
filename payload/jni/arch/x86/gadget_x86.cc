@@ -25,17 +25,17 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     jobject ref_obj = AddIndirectReference(ref_table, cookie, obj);
     jobject ref_arg_first = AddIndirectReference(ref_table, cookie, arg_first);
 
-    // The main logic of the hooking gadget composer.
-    //          *** will be updated later ***
-
     // Restore the entry point to the quick compiled code of "loadClass()".
     art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(meth);
     uint64_t entry = reinterpret_cast<uint64_t>(g_load_class_quick_compiled);
     art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry);
 
+    // Enter the instrument gadget composer.
+    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
+
+
     // Let "loadClass()" finish its original task. The "android.app.Application"
     // will be returned.
-    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
     jobject ref_clazz = env->CallObjectMethod(ref_obj, meth_id, ref_arg_first);
 
     // Use the reference key to resolve the actual object.

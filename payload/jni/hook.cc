@@ -52,7 +52,7 @@ void Bootstrap::LogJNIException(JNIEnv* env, jthrowable except)
     LOGD("%s\n", cstr);
 }
 
-bool Bootstrap::CraftAnalysisModulePath()
+bool Bootstrap::ResolveInjectorDeliveredSymbols()
 {
     char buf[kBlahSizeMid];
     sprintf(buf, "/proc/self/maps");
@@ -70,23 +70,51 @@ bool Bootstrap::CraftAnalysisModulePath()
         sscanf(buf, "%x-", &addr_bgn);
         #endif
 
-        // Try to read the module pathname.
+        // Try to read the core library pathname.
         bool found = true;
         char* path = reinterpret_cast<char*>(addr_bgn);
         while (*path != 0)
             ++path;
         ++path;
-        size_t len = strlen(kKeyPathAnalysisModule);
+        size_t len = strlen(kKeyPathCoreLibrary);
+        for (size_t i = 0 ; i < len ; ++i) {
+            if (kKeyPathCoreLibrary[i] != path[i]) {
+                found = false;
+                break;
+            }
+        }
+        if (!found)
+            break;
+        g_lib_path = path + len + 1;
+
+        // Try to read the analysis module pathname.
+        found = true;
+        path += len + 1 + strlen(g_lib_path) + 1;
+        len = strlen(kKeyPathAnalysisModule);
         for (size_t i = 0 ; i < len ; ++i) {
             if (kKeyPathAnalysisModule[i] != path[i]) {
                 found = false;
                 break;
             }
         }
-        if (found) {
-            module_path_ = path + len + 1;
-            return HOOK_SUCCESS;
+        if (!found)
+            break;
+        g_module_path = path + len + 1;
+
+        // Try to read the main class name of the analysis module.
+        found = true;
+        path += len + 1 + strlen(g_module_path) + 1;
+        len = strlen(kKeyNameMainClass);
+        for (size_t i = 0 ; i < len ; ++i) {
+            if (kKeyNameMainClass[i] != path[i]) {
+                found = false;
+                break;
+            }
         }
+        if (!found)
+            break;
+        g_class_name = path + len + 1;
+        return HOOK_SUCCESS;
     }
     return HOOK_FAILURE;
 }
@@ -162,7 +190,7 @@ bool Bootstrap::LoadAnalysisModule()
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     // Convert the pathname strings to UTF format.
-    jstring path_module = env->NewStringUTF(module_path_);
+    jstring path_module = env->NewStringUTF(g_module_path);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
     jstring path_cache = env->NewStringUTF(dex_path_.get());
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
@@ -229,13 +257,14 @@ bool Bootstrap::DeployInstrumentGadgetComposer()
 
 void __attribute__((constructor)) HookEntry()
 {
-    LOGD("\n\nHook Bootstrapping, pid = %d\n\n", getpid());
+    LOGD("\n\nInstrumentation Bootstrapping, pid = %d\n\n", getpid());
 
     hook::Bootstrap bootstrap;
     // Generate the pathnames required by Android DexClassLoader to dynamically
     // load our instrumentation module.
-    if (bootstrap.CraftAnalysisModulePath() != hook::HOOK_SUCCESS)
+    if (bootstrap.ResolveInjectorDeliveredSymbols() != hook::HOOK_SUCCESS)
         return;
+
     if (bootstrap.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
         return;
     if (bootstrap.CreateDexPrivateDir() != hook::HOOK_SUCCESS)

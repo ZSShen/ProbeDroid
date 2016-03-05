@@ -18,12 +18,11 @@ class Bootstrap
 {
   public:
     Bootstrap()
-      : module_path_(nullptr),
-        dex_path_(nullptr),
+      : dex_path_(nullptr),
         handle_(nullptr)
     {}
 
-    bool CraftAnalysisModulePath();
+    bool ResolveInjectorDeliveredSymbols();
     bool CraftDexPrivatePath();
     bool CreateDexPrivateDir();
     bool CacheJVM();
@@ -41,7 +40,6 @@ class Bootstrap
     static constexpr const char* kRecursiveExcept = "Exception occurs during "
                                                 "exception message processing.";
 
-    char* module_path_;
     std::unique_ptr<char> dex_path_;
     ScopedDl handle_;
 };
