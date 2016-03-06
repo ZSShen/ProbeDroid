@@ -146,7 +146,7 @@ bool Bootstrap::LoadAnalysisModule()
     jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
-    // Resolve "DexClassLoader.DexClassLoader(String, String, String, ClassLoader)"
+    // Resolve "DexClassLoader.DexClassLoader(String, String, String, ClassLoader)".
     clazz = env->FindClass(kNormDexClassLoader);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
     snprintf(sig, kBlahSizeMid, "(%s%s%s%s)V", kSigString, kSigString,
@@ -163,10 +163,35 @@ bool Bootstrap::LoadAnalysisModule()
     // Create the custom "dalvik.system.DexClassLoader".
     jobject dex_class_loader = env->NewObject(clazz, meth, path_module, path_cache,
                                               path_cache, class_loader);
+
+    // Resolve "Class DexClassLoader.loadClass(String, boolean)".
+    snprintf(sig, kBlahSizeMid, "(%s)%s", kSigString, kSigClass);
+    meth = env->GetMethodID(clazz, kFuncLoadClass, sig);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+
+    // Convert the main class of the analysis APK to UTF format.
+    jstring name_main = env->NewStringUTF(g_class_name);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+
+    // Load the main class of the analysis APK.
+    g_class_analysis_main = reinterpret_cast<jclass>(env->CallObjectMethod(
+                                            dex_class_loader, meth, name_main));
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+
+    // Resolve the constructor of this main class.
+    snprintf(sig, kBlahSizeMid, "()V");
+    meth = env->GetMethodID(g_class_analysis_main, kFuncConstructor, sig);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+
+    // Instantiate an object for it and cache the instance.
+    jobject obj_analysis_main = env->NewObject(g_class_analysis_main, meth);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+    g_obj_analysis_main = env->NewGlobalRef(obj_analysis_main);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     env->DeleteLocalRef(path_module);
     env->DeleteLocalRef(path_cache);
+    env->DeleteLocalRef(name_main);
     g_jvm->DetachCurrentThread();
     return HOOK_SUCCESS;
 }

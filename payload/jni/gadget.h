@@ -16,7 +16,7 @@ class InstrumentGadgetComposer
         id_load_class_(id_load_class)
     {}
 
-    void compose();
+    bool compose();
 
   private:
     JNIEnv* env_;
@@ -70,5 +70,9 @@ extern void* g_thread_decode_jobject;
 
 // The original entry to the loadClass() quick compiled code.
 extern void* g_load_class_quick_compiled;
+
+// The cached class and object instance of analysis module.
+extern jclass g_class_analysis_main;
+extern jobject g_obj_analysis_main;
 
 #endif
