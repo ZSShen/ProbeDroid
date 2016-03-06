@@ -29,5 +29,9 @@ jobject g_obj_analysis_main;
 
 bool InstrumentGadgetComposer::compose()
 {
+	// Resolve "void Instrument.prepareNativeBridge(String)".
+
+	// Invoke it to force the analysis module link with this native library.
+
     return true;
 }

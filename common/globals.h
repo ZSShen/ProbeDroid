@@ -31,4 +31,10 @@ static const char* kKeyNameMainClass = "NAME_CLASS";
 static const char* kPermReadExec = "r-xp";
 static const char* kPermReadWrteExec = "rwxp";
 
+// Return value to represent if the procedure completes successfully.
+enum {
+	PROC_SUCC = 0,
+	PROC_FAIL = 1
+};
+
 #endif

@@ -10,11 +10,6 @@
 
 namespace hook {
 
-enum {
-    HOOK_SUCCESS = 0,
-    HOOK_FAILURE = 1
-};
-
 class Bootstrap
 {
   public:

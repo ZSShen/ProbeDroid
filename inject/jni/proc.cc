@@ -73,17 +73,17 @@ bool FunctionTable::Resolve(pid_t pid_me, pid_t pid_him)
     // and the target app.
     uintptr_t addr_linker_me = GetLibraryAddress(pid_me, kPathLinker);
     if (addr_linker_me == 0)
-        return PROC_FAILURE;
+        return PROC_FAIL;
     uintptr_t addr_linker_him = GetLibraryAddress(pid_him, kPathLinker);
     if (addr_linker_him == 0)
-        return PROC_FAILURE;
+        return PROC_FAIL;
 
     uintptr_t addr_libc_me = GetLibraryAddress(pid_me, kPathLibc);
     if (addr_libc_me == 0)
-        return PROC_FAILURE;
+        return PROC_FAIL;
     uintptr_t addr_libc_him = GetLibraryAddress(pid_him, kPathLibc);
     if (addr_libc_him == 0)
-        return PROC_FAILURE;
+        return PROC_FAIL;
 
     // Second, we can apply the relative offsets of the dlopen() and mmap()
     // residing in libdl and libc of the invoking app and the addresses of the
@@ -91,14 +91,14 @@ bool FunctionTable::Resolve(pid_t pid_me, pid_t pid_him)
     // and mmap() of the target.
     uintptr_t addr_dlopen_me = GetFunctionAddress(kNameLinker, kFuncDlopen);
     if (addr_dlopen_me == 0)
-        return PROC_FAILURE;
+        return PROC_FAIL;
     uintptr_t addr_mmap_me = GetFunctionAddress(kPathLibc, kFuncMmap);
     if (addr_mmap_me == 0)
-        return PROC_FAILURE;
+        return PROC_FAIL;
 
     dlopen_ = addr_linker_him + (addr_dlopen_me - addr_linker_me);
     mmap_ = addr_libc_him + (addr_mmap_me - addr_libc_me);
-    return PROC_SUCCESS;
+    return PROC_SUCC;
 }
 
 void EggHunter::WaitForForkEvent(pid_t pid)
@@ -157,10 +157,10 @@ bool EggHunter::PokeTextInApp(uintptr_t addr_txt, const char* buf, size_t count_
         long word;
         memcpy(&word, buf + count_wrt, sizeof(word));
         if (ptrace(PTRACE_POKETEXT, pid_app_, addr_txt + count_wrt, word) == -1)
-            return PROC_FAILURE;
+            return PROC_FAIL;
         count_wrt += sizeof(word);
     }
-    return PROC_SUCCESS;
+    return PROC_SUCC;
 }
 
 bool EggHunter::PeekTextInApp(uintptr_t addr_txt, char* buf, size_t count_byte)
@@ -170,16 +170,16 @@ bool EggHunter::PeekTextInApp(uintptr_t addr_txt, char* buf, size_t count_byte)
     while (count_read < count_byte) {
         long word = ptrace(PTRACE_PEEKTEXT, pid_app_, addr_txt + count_read, nullptr);
         if (word == -1)
-            return PROC_FAILURE;
+            return PROC_FAIL;
         count_read += sizeof(word);
         slide[idx++] = word;
     }
-    return PROC_SUCCESS;
+    return PROC_SUCC;
 }
 
 bool EggHunter::CaptureApp(pid_t pid_zygote, const char* app_name)
 {
-    bool rtn = PROC_SUCCESS;
+    bool rtn = PROC_SUCC;
     try {
         // First, we need to attach to the zygote process and wait for the
         // target app to be forked after our triggering.
@@ -199,11 +199,11 @@ bool EggHunter::CaptureApp(pid_t pid_zygote, const char* app_name)
         // Second, we enter the polling loop to wait for the target app. When
         // we catch the fork event fired by zygote, we should verify if the
         // newly forked app is our target by examining the startup command. If
-        // so, we PROC_SUCCessfully get the goal and should release zygote.
+        // so, we PROC_SUCCfully get the goal and should release zygote.
         WaitForForkEvent(pid_zygote);
         CheckStartupCmd(app_name);
     } catch (BadProbe& e) {
-        rtn = PROC_FAILURE;
+        rtn = PROC_FAIL;
         if (pid_app_ != 0)
             ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
     }
@@ -217,8 +217,8 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
 {
     pid_t pid_inject = getpid();
 
-    if (func_tbl_.Resolve(pid_inject, pid_app_) != PROC_SUCCESS)
-        return PROC_FAILURE;
+    if (func_tbl_.Resolve(pid_inject, pid_app_) != PROC_SUCC)
+        return PROC_FAIL;
 
     // Prepare the library pathname for dlopen() and the key-value pairs for
     // inter-process communication. Zero padding is necessary to produce the
@@ -252,7 +252,7 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
     uintptr_t addr_mmap = func_tbl_.GetMmap();
     uintptr_t addr_dlopen = func_tbl_.GetDlopen();
 
-    bool rtn = PROC_SUCCESS;
+    bool rtn = PROC_SUCC;
     try {
         // Backup the context of the target app.
         struct user_regs_struct reg_orig;
@@ -280,7 +280,7 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
         reg_modi.esp -= count_byte;
 
         if (PokeTextInApp(reg_modi.esp, reinterpret_cast<char*>(param),
-                          count_byte) != PROC_SUCCESS)
+                          count_byte) != PROC_SUCC)
             LOG_SYSERR_AND_THROW()
 
         if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_modi) == -1)
@@ -324,7 +324,7 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
         reg_modi.esp -= count_byte;
 
         if (PokeTextInApp(reg_modi.esp, reinterpret_cast<char*>(param),
-                          count_byte) != PROC_SUCCESS)
+                          count_byte) != PROC_SUCC)
             LOG_SYSERR_AND_THROW()
 
         if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_modi) == -1)
@@ -347,7 +347,7 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
         if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
             LOG_SYSERR_AND_THROW()
     } catch (BadProbe& e) {
-        rtn = PROC_FAILURE;
+        rtn = PROC_FAIL;
         if (pid_app_ != 0)
             ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
     }
@@ -359,9 +359,9 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
 void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_path,
                      const char* module_path, const char* class_name)
 {
-    if (CaptureApp(pid_zygote, app_name) != PROC_SUCCESS)
+    if (CaptureApp(pid_zygote, app_name) != PROC_SUCC)
         return;
-    if (InjectApp(lib_path, module_path, class_name) != PROC_SUCCESS)
+    if (InjectApp(lib_path, module_path, class_name) != PROC_SUCC)
         return;
     TIP() << StringPrintf("[+] %s is successfully injected.\n", lib_path);
 }

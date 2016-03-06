@@ -9,11 +9,6 @@
 
 namespace proc {
 
-enum {
-    PROC_SUCCESS = 0,
-    PROC_FAILURE = 1
-};
-
 class EggHunter;
 
 class FunctionTable

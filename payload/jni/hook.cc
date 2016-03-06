@@ -79,9 +79,9 @@ bool Bootstrap::ResolveInjectorDeliveredSymbols()
         if (!found)
             break;
         g_class_name = path + len + 1;
-        return HOOK_SUCCESS;
+        return PROC_SUCC;
     }
-    return HOOK_FAILURE;
+    return PROC_FAIL;
 }
 
 bool Bootstrap::CraftDexPrivatePath()
@@ -96,13 +96,13 @@ bool Bootstrap::CraftDexPrivatePath()
                      (1 + strlen(kDirInstrument)) + 1;
         char* path = new char[len];
         if (!path)
-            return HOOK_FAILURE;
+            return PROC_FAIL;
         snprintf(path, len, "/%s/%s/%s/%s", kDirDexData, kDirDexData, buf,
                  kDirInstrument);
         dex_path_.reset(path);
-        return HOOK_SUCCESS;
+        return PROC_SUCC;
     }
-    return HOOK_FAILURE;
+    return PROC_FAIL;
 }
 
 bool Bootstrap::CreateDexPrivateDir()
@@ -111,12 +111,12 @@ bool Bootstrap::CreateDexPrivateDir()
     if (stat(dex_path_.get(), &stat_buf) == 0) {
         // If the private directory is already created, just return now.
         if (S_ISDIR(stat_buf.st_mode))
-            return HOOK_SUCCESS;
+            return PROC_SUCC;
         if (unlink(dex_path_.get()) != 0)
-            return HOOK_FAILURE;
+            return PROC_FAIL;
     }
     return (mkdir(dex_path_.get(), kPrivateDexPerm) == 0)?
-           HOOK_SUCCESS : HOOK_FAILURE;
+           PROC_SUCC : PROC_FAIL;
 }
 
 bool Bootstrap::CacheJVM()
@@ -125,7 +125,7 @@ bool Bootstrap::CacheJVM()
     // Apply the manually crafted assembly gadget to get the JNIEnv* handle.
     GetJniEnv(&env);
     // Apply the Android JNI to get the JVM handle.
-    return (env->GetJavaVM(&g_jvm) == JNI_OK)? HOOK_SUCCESS : HOOK_FAILURE;
+    return (env->GetJavaVM(&g_jvm) == JNI_OK)? PROC_SUCC : PROC_FAIL;
 }
 
 bool Bootstrap::LoadAnalysisModule()
@@ -193,24 +193,24 @@ bool Bootstrap::LoadAnalysisModule()
     env->DeleteLocalRef(path_cache);
     env->DeleteLocalRef(name_main);
     g_jvm->DetachCurrentThread();
-    return HOOK_SUCCESS;
+    return PROC_SUCC;
 }
 
 bool Bootstrap::ResolveArtSymbol()
 {
     handle_.reset(dlopen(kPathLibArt, RTLD_LAZY));
     if (!handle_.get())
-        return HOOK_FAILURE;
+        return PROC_FAIL;
     g_indirect_reference_table_add = handle_.resolve(kIndirectReferneceTableAdd);
     if (!g_indirect_reference_table_add)
-        return HOOK_FAILURE;
+        return PROC_FAIL;
     g_indirect_reference_table_remove = handle_.resolve(kIndirectReferenceTableRemove);
     if (!g_indirect_reference_table_remove)
-        return HOOK_FAILURE;
+        return PROC_FAIL;
     g_thread_decode_jobject = handle_.resolve(kThreadDecodeJObject);
     if (!g_thread_decode_jobject)
-        return HOOK_FAILURE;
-    return HOOK_SUCCESS;
+        return PROC_FAIL;
+    return PROC_SUCC;
 }
 
 bool Bootstrap::DeployInstrumentGadgetComposer()
@@ -240,7 +240,7 @@ bool Bootstrap::DeployInstrumentGadgetComposer()
     entry = reinterpret_cast<uint64_t>(ComposeInstrumentGadgetTrampoline);
     art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry);
 
-    return HOOK_SUCCESS;
+    return PROC_SUCC;
 }
 
 }
@@ -252,16 +252,16 @@ void __attribute__((constructor)) HookEntry()
     hook::Bootstrap bootstrap;
     // Generate the pathnames required by Android DexClassLoader to dynamically
     // load our instrumentation module.
-    if (bootstrap.ResolveInjectorDeliveredSymbols() != hook::HOOK_SUCCESS)
+    if (bootstrap.ResolveInjectorDeliveredSymbols() != PROC_SUCC)
         return;
 
-    if (bootstrap.CraftDexPrivatePath() != hook::HOOK_SUCCESS)
+    if (bootstrap.CraftDexPrivatePath() != PROC_SUCC)
         return;
-    if (bootstrap.CreateDexPrivateDir() != hook::HOOK_SUCCESS)
+    if (bootstrap.CreateDexPrivateDir() != PROC_SUCC)
         return;
 
     // Retrieve the JVM handle which is necessary for the JNI interaction later.
-    if (bootstrap.CacheJVM() != hook::HOOK_SUCCESS)
+    if (bootstrap.CacheJVM() != PROC_SUCC)
         return;
 
     // Load our instrumentation module.
@@ -273,18 +273,18 @@ void __attribute__((constructor)) HookEntry()
     std::future<bool> future = task.get_future();
     std::thread thread(std::move(task));
     thread.join();
-    if (future.get() != hook::HOOK_SUCCESS)
+    if (future.get() != PROC_SUCC)
         return;
 
     // Resolve the entry points of some critical libart functions which would be
     // used for native code resource management.
-    if (bootstrap.ResolveArtSymbol() != hook::HOOK_SUCCESS)
+    if (bootstrap.ResolveArtSymbol() != PROC_SUCC)
         return;
 
     // Deploy the hooking gadget composer and finish the bootstrap process.
     // The control flow of the instrumented application will be diverted to
     // the composer when "Class ClassLoader.loadClass(String)" is about to be
     // called to load the first application component "android.app.Application".
-    if (bootstrap.DeployInstrumentGadgetComposer() != hook::HOOK_SUCCESS)
+    if (bootstrap.DeployInstrumentGadgetComposer() != PROC_SUCC)
         return;
 }
