@@ -33,8 +33,8 @@ static const char* kPermReadWrteExec = "rwxp";
 
 // Return value to represent if the procedure completes successfully.
 enum {
-	PROC_SUCC = 0,
-	PROC_FAIL = 1
+    PROC_SUCC = 0,
+    PROC_FAIL = 1
 };
 
 #endif

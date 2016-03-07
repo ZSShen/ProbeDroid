@@ -174,19 +174,22 @@ bool Bootstrap::LoadAnalysisModule()
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     // Load the main class of the analysis APK.
-    g_class_analysis_main = reinterpret_cast<jclass>(env->CallObjectMethod(
-                                            dex_class_loader, meth, name_main));
+    jobject class_main = env->CallObjectMethod(dex_class_loader, meth, name_main);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     // Resolve the constructor of this main class.
     snprintf(sig, kBlahSizeMid, "()V");
-    meth = env->GetMethodID(g_class_analysis_main, kFuncConstructor, sig);
+    meth = env->GetMethodID(reinterpret_cast<jclass>(class_main), kFuncConstructor, sig);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
-    // Instantiate an object for it and cache the instance.
-    jobject obj_analysis_main = env->NewObject(g_class_analysis_main, meth);
+    // Instantiate an object for it.
+    jobject obj_main = env->NewObject(reinterpret_cast<jclass>(class_main), meth);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
-    g_obj_analysis_main = env->NewGlobalRef(obj_analysis_main);
+
+    // Cache the main class and its object.
+    g_class_analysis_main = reinterpret_cast<jclass>(env->NewGlobalRef(class_main));
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env);
+    g_obj_analysis_main = env->NewGlobalRef(obj_main);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env);
 
     env->DeleteLocalRef(path_module);

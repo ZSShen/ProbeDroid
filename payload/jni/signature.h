@@ -50,12 +50,6 @@ static const char* kFuncOnApplicationStop = "onApplicationStop";
 static const char* kFuncBeforeMethodExecute = "beforeMethodExecute";
 static const char* kFuncAfterMethodExecute = "afterMethodExecute";
 
-static const char* kSigPrepareNativeBridge = "(Ljava/lang/String;)V";
-static const char* kSigOnApplicationStart = "()V";
-static const char* kSigOnApplicationStop = "()V";
-static const char* kSigBeforeMethodExecute = "([Ljava/lang/Object;)V";
-static const char* kSigAfterMethodExecute = "(Ljava/lang/Object;)V";
-
 // Cache some critical C++ function signatures exported from libart.
 static const char* kIndirectReferneceTableAdd =
                     "_ZN3art22IndirectReferenceTable3AddEjPNS_6mirror6ObjectE";

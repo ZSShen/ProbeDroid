@@ -16,9 +16,11 @@ class InstrumentGadgetComposer
         id_load_class_(id_load_class)
     {}
 
-    bool compose();
+    void compose();
 
   private:
+    bool linkWithAnalysisAPK();
+
     JNIEnv* env_;
     jobject ref_class_loader_;
     jmethodID id_load_class_;

@@ -27,11 +27,31 @@ jclass g_class_analysis_main;
 jobject g_obj_analysis_main;
 
 
-bool InstrumentGadgetComposer::compose()
+void InstrumentGadgetComposer::compose()
 {
-	// Resolve "void Instrument.prepareNativeBridge(String)".
+    if (linkWithAnalysisAPK() != PROC_SUCC)
+        return;
 
-	// Invoke it to force the analysis module link with this native library.
+    return;
+}
 
-    return true;
+bool InstrumentGadgetComposer::linkWithAnalysisAPK()
+{
+    // Resolve "void Instrument.prepareNativeBridge(String)".
+    char sig[kBlahSizeMid];
+    snprintf(sig, kBlahSizeMid, "(%s)V", kSigString);
+    jmethodID meth = env_->GetMethodID(g_class_analysis_main,
+                                       kFuncPrepareNativeBridge, sig);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+
+    // Convert the library pathname to UTF format.
+    jstring path_module = env_->NewStringUTF(g_lib_path);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+
+    // Invoke it to force the analysis module link with this native library.
+    env_->CallVoidMethod(g_obj_analysis_main, meth, path_module);
+    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+
+    env_->DeleteLocalRef(path_module);
+    return PROC_SUCC;
 }
