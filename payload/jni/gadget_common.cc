@@ -85,7 +85,6 @@ bool InstrumentGadgetComposer::RegisterInstrumentGadget()
     CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
 
     // Invoke it to let the analysis APK deploy the instrument gadget.
-    LOGD("Before onApplicationStart() %p", meth);
     env_->CallVoidMethod(g_obj_analysis_main, meth);
     CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
 

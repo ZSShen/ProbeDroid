@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE            := hook
+LOCAL_MODULE            := ProbeDroid
 
 LOCAL_C_INCLUDES        +=  ../../common \
                             ../../android/art/runtime \
@@ -11,7 +11,7 @@ LOCAL_C_INCLUDES        +=  ../../common \
 LOCAL_SRC_FILES         :=  gadget_common.cc \
                             ./arch/x86/gadget-asm_x86.s \
                             ./arch/x86/gadget_x86.cc \
-                            hook.cc \
+                            boot.cc \
                             ./bridge/org_probedroid_instrument.cc
 
 LOCAL_CFLAGS            := -g -fexceptions

@@ -1,5 +1,5 @@
-#ifndef _HOOK_H_
-#define _HOOK_H_
+#ifndef _BOOT_H_
+#define _BOOT_H_
 
 
 #include <jni.h>
@@ -8,7 +8,7 @@
 #include "scoped_dl.h"
 
 
-namespace hook {
+namespace boot {
 
 class Bootstrap
 {

@@ -10,14 +10,14 @@
 
 #include "globals.h"
 #include "logcat.h"
-#include "hook.h"
+#include "boot.h"
 #include "gadget.h"
 #include "signature.h"
 #include "mirror/art_method-inl.h"
 #include "jni_except-inl.h"
 
 
-namespace hook {
+namespace boot {
 
 bool Bootstrap::ResolveInjectorDeliveredSymbols()
 {
@@ -287,7 +287,7 @@ void __attribute__((constructor)) HookEntry()
 {
     LOGD("\n\nInstrumentation Bootstrapping, pid = %d\n\n", getpid());
 
-    hook::Bootstrap bootstrap;
+    boot::Bootstrap bootstrap;
     // Generate the pathnames required by Android DexClassLoader to dynamically
     // load our instrumentation module.
     if (bootstrap.ResolveInjectorDeliveredSymbols() != PROC_SUCC)
@@ -306,7 +306,7 @@ void __attribute__((constructor)) HookEntry()
     // To avoid the ANR, we create a worker thread to offload the task bound to
     // the main thread. Note that this is just a work around, more stable
     // approach is needed.
-    auto func = std::bind(&hook::Bootstrap::LoadAnalysisModule, &bootstrap);
+    auto func = std::bind(&boot::Bootstrap::LoadAnalysisModule, &bootstrap);
     std::packaged_task<bool()> task(func);
     std::future<bool> future = task.get_future();
     std::thread thread(std::move(task));
