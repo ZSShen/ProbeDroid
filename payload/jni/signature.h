@@ -6,16 +6,23 @@
 static const char* kNormClassLoader = "java/lang/ClassLoader";
 static const char* kNormDexClassLoader = "dalvik/system/DexClassLoader";
 static const char* kNormObject = "java/lang/Object";
+static const char* kNormDexFile = "dalvik/system/DexFile";
 
 static const char* kFuncConstructor = "<init>";
 static const char* kFuncGetSystemClassLoader = "getSystemClassLoader";
 static const char* kFuncToString = "toString";
 static const char* kFuncLoadClass = "loadClass";
+static const char* kFuncLoadDex = "loadDex";
+static const char* kFuncEntries = "entries";
+static const char* kFuncHasMoreElements = "hasMoreElements";
+static const char* kFuncNextElement = "nextElement";
 
 static const char* kSigClassLoader = "Ljava/lang/ClassLoader;";
 static const char* kSigDexClassLoader = "Ldalvik/system/DexClassLoader;";
 static const char* kSigString = "Ljava/lang/String;";
 static const char* kSigClass = "Ljava/lang/Class;";
+static const char* kSigDexFile = "Ldalvik/system/DexFile;";
+static const char* kSigEnumeration = "Ljava/util/Enumeration;";
 
 static const char kSigVoid = 'V';
 static const char kSigBoolean = 'Z';

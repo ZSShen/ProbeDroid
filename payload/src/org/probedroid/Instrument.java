@@ -10,6 +10,7 @@ public abstract class Instrument {
     public void instrumentMethod(String nameClass, String nameMethod,
             String signatureMethod, MethodBundle bundle)
             throws ClassNotFoundException, NoSuchMethodException {
+        instrumentMethodNative(nameClass, nameMethod, signatureMethod, bundle);
     }
 
     public abstract void onApplicationStart();

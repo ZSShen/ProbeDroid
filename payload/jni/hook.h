@@ -30,6 +30,7 @@ class Bootstrap
     static constexpr int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
     static constexpr const char* kDirDexData = "data";
     static constexpr const char* kDirInstrument = "instrument";
+    static constexpr const char* kDexFileTemp = "DexFile.dex";
     static constexpr const char* kPathLibArt = "/system/lib/libart.so";
 
     std::unique_ptr<char> dex_path_;
