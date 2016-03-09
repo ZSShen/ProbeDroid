@@ -12,6 +12,7 @@ LOCAL_SRC_FILES         :=  gadget_common.cc \
                             ./arch/x86/gadget-asm_x86.s \
                             ./arch/x86/gadget_x86.cc \
                             boot.cc \
+                            signature.cc \
                             ./bridge/org_probedroid_instrument.cc
 
 LOCAL_CFLAGS            := -g -fexceptions

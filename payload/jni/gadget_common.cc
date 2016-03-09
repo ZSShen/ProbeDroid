@@ -33,13 +33,13 @@ jobject g_obj_analysis_main;
 PtrBundleMap g_map_method_bundle(nullptr);
 
 
-void InstrumentGadgetComposer::compose()
+void InstrumentGadgetComposer::Compose()
 {
     if (LinkWithAnalysisAPK() != PROC_SUCC)
         return;
 
     // Initialize the global map for method information maintenance.
-    typedef std::unordered_map<void*, std::unique_ptr<MethodBundleNative>>
+    typedef std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>
             BundleMap;
     BundleMap* bundle_map = new(std::nothrow)BundleMap();
     if (!bundle_map)
@@ -58,18 +58,18 @@ bool InstrumentGadgetComposer::LinkWithAnalysisAPK()
 {
     // Resolve "void Instrument.prepareNativeBridge(String)".
     char sig[kBlahSizeMid];
-    snprintf(sig, kBlahSizeMid, "(%s)V", kSigString);
+    snprintf(sig, kBlahSizeMid, "(%s)%c", kSigString, kSigVoid);
     jmethodID meth = env_->GetMethodID(g_class_analysis_main,
                                        kFuncPrepareNativeBridge, sig);
-    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+    CHK_EXCP(g_jvm, env_);
 
     // Convert the library pathname to UTF format.
     jstring path_module = env_->NewStringUTF(g_lib_path);
-    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+    CHK_EXCP(g_jvm, env_);
 
     // Invoke it to let the analysis APK link with this native library.
     env_->CallVoidMethod(g_obj_analysis_main, meth, path_module);
-    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+    CHK_EXCP(g_jvm, env_);
 
     env_->DeleteLocalRef(path_module);
     return PROC_SUCC;
@@ -79,14 +79,14 @@ bool InstrumentGadgetComposer::RegisterInstrumentGadget()
 {
     // Resolve the overrode "void Instrument.onApplicationStart()".
     char sig[kBlahSizeMid];
-    snprintf(sig, kBlahSizeMid, "()V");
+    snprintf(sig, kBlahSizeMid, "()%c", kSigVoid);
     jmethodID meth = env_->GetMethodID(g_class_analysis_main,
                                        kFuncOnApplicationStart, sig);
-    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+    CHK_EXCP(g_jvm, env_);
 
     // Invoke it to let the analysis APK deploy the instrument gadget.
     env_->CallVoidMethod(g_obj_analysis_main, meth);
-    CHECK_AND_LOG_EXCEPTION(g_jvm, env_);
+    CHK_EXCP(g_jvm, env_);
 
     return PROC_SUCC;
 }

@@ -20,7 +20,7 @@ class InstrumentGadgetComposer
         id_load_class_(id_load_class)
     {}
 
-    void compose();
+    void Compose();
 
   private:
     bool LinkWithAnalysisAPK();
@@ -34,12 +34,14 @@ class InstrumentGadgetComposer
 class MethodBundleNative
 {
   public:
-    MethodBundleNative(bool is_static, const std::string& name_class,
-      const std::string& name_method, const std::string& signature_method,
-      const std::vector<char>& type_inputs, char type_output,
-      void* quick_code_entry_origin)
+    MethodBundleNative(bool is_static, const char* name_class, const char* name_method,
+      const char* signature_method, const std::vector<char>& type_inputs, char type_output,
+      uint64_t quick_code_entry_origin, jmethodID meth_before_exec,
+      jmethodID meth_after_exec)
      : is_static_(is_static),
        type_output_(type_output),
+       meth_before_exec_(meth_before_exec),
+       meth_after_exec_(meth_after_exec),
        quick_code_entry_origin_(quick_code_entry_origin),
        name_class_(name_class),
        name_method_(name_method),
@@ -50,7 +52,9 @@ class MethodBundleNative
   private:
     bool is_static_;
     char type_output_;
-    void* quick_code_entry_origin_;
+    jmethodID meth_before_exec_;
+    jmethodID meth_after_exec_;
+    uint64_t quick_code_entry_origin_;
     std::string name_class_;
     std::string name_method_;
     std::string signature_method_;
@@ -109,7 +113,7 @@ extern jobject g_obj_analysis_main;
 
 // The global map to maintain the information about all the instrumented methods
 // of the target app.
-typedef std::unique_ptr<std::unordered_map<void*, std::unique_ptr<MethodBundleNative>>>
+typedef std::unique_ptr<std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>>
         PtrBundleMap;
 extern PtrBundleMap g_map_method_bundle;
 

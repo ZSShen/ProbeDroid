@@ -10,10 +10,10 @@ extern "C" {
 /*
  * Class:     org_probedroid_Instrument
  * Method:    instrumentMethodNative
- * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/probedroid/support/MethodBundle;)V
+ * Signature: (ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/probedroid/support/MethodBundle;)V
  */
 JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
-  (JNIEnv *, jobject, jstring, jstring, jstring, jobject);
+  (JNIEnv *, jobject, jboolean, jstring, jstring, jstring, jobject);
 
 #ifdef __cplusplus
 }

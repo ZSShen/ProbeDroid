@@ -1,6 +1,8 @@
 #ifndef _SIGNATURE_H_
 #define _SIGNATURE_H_
 
+#include <vector>
+
 
 // Cache some commonly used Java signatures for method invocation.
 static const char* kNormClassLoader = "java/lang/ClassLoader";
@@ -23,6 +25,10 @@ static const char* kSigString = "Ljava/lang/String;";
 static const char* kSigClass = "Ljava/lang/Class;";
 static const char* kSigDexFile = "Ldalvik/system/DexFile;";
 static const char* kSigEnumeration = "Ljava/util/Enumeration;";
+static const char* kSigObjectLong = "Ljava/lang/Object;";
+static const char* kSigIllegalArgument = "Ljava/lang/IllegalArgumentException;";
+static const char* kSigClassNotFound = "Ljava/lang/ClassNotFoundException;";
+static const char* kSigNoSuchMethod = "Ljava/lang/NoSuchMethodException";
 
 static const char kSigVoid = 'V';
 static const char kSigBoolean = 'Z';
@@ -48,6 +54,12 @@ static const char kTypeDouble = 8;
 static const char kTypeObject = 9;
 static const char kTypeArray = 16;
 
+static const char kDeliSlash = '/';
+static const char kDeliDot = '.';
+static const char kDeliLeftInput = '(';
+static const char kDeliRightInput = ')';
+static const char kDeliObjectTail = ';';
+
 // Cache some critical signatures used in our ProbeDroid SDK.
 static const char* kNormInstrument = "org/probedroid/Instrument";
 
@@ -57,6 +69,9 @@ static const char* kFuncOnApplicationStop = "onApplicationStop";
 static const char* kFuncBeforeMethodExecute = "beforeMethodExecute";
 static const char* kFuncAfterMethodExecute = "afterMethodExecute";
 
+static const char* kFieldInterceptBefore = "mInterceptBefore";
+static const char* kFieldInterceptAfter = "mInterceptAfter";
+
 // Cache some critical C++ function signatures exported from libart.
 static const char* kIndirectReferneceTableAdd =
                     "_ZN3art22IndirectReferenceTable3AddEjPNS_6mirror6ObjectE";
@@ -64,5 +79,33 @@ static const char* kIndirectReferenceTableRemove =
                     "_ZN3art22IndirectReferenceTable6RemoveEjPv";
 static const char* kThreadDecodeJObject =
                     "_ZNK3art6Thread13DecodeJObjectEP8_jobject";
+
+
+class MethodSignatureParser
+{
+  public:
+    MethodSignatureParser(const char* signature)
+     : output_(kTypeVoid),
+       signature_(signature),
+       inputs_()
+    {}
+
+    void Parse();
+
+    std::vector<char>& GetInputType()
+    {
+        return inputs_;
+    }
+
+    char GetOutputType()
+    {
+        return output_;
+    }
+
+  private:
+    char output_;
+    const char* signature_;
+    std::vector<char> inputs_;
+};
 
 #endif

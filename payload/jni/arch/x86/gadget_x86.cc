@@ -33,7 +33,7 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     // Enter the instrument gadget composer.
     jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
     InstrumentGadgetComposer composer(env, ref_obj, meth_id);
-    composer.compose();
+    composer.Compose();
 
     // Let "loadClass()" finish its original task. The "android.app.Application"
     // will be returned.
