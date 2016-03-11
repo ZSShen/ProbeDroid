@@ -15,7 +15,7 @@ public class HelloWorld extends Instrument {
         StringBuilderToString bundleSBToString = new StringBuilderToString(true,
                 true);
         try {
-            instrumentMethod(nameClass, nameMethod, signatureMethod,
+            instrumentMethod(false, nameClass, nameMethod, signatureMethod,
                     bundleSBToString);
         } catch (ClassNotFoundException e) {
             e.printStackTrace();

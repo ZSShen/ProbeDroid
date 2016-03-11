@@ -2,12 +2,13 @@
 #define _GADGET_H_
 
 
-#include <jni.h>
 #include <cstdint>
 #include <string>
 #include <vector>
 #include <unordered_map>
 #include <memory>
+#include <mutex>
+#include <jni.h>
 
 
 class InstrumentGadgetComposer
@@ -46,8 +47,14 @@ class MethodBundleNative
        name_class_(name_class),
        name_method_(name_method),
        signature_method_(signature_method),
-       type_inputs_(type_output)
+       type_inputs_(type_output),
+       mutex_()
     {}
+
+    std::mutex& GetMutex()
+    {
+        return mutex_;
+    }
 
   private:
     bool is_static_;
@@ -59,6 +66,7 @@ class MethodBundleNative
     std::string name_method_;
     std::string signature_method_;
     std::vector<char> type_inputs_;
+    std::mutex mutex_;
 };
 
 // The gadget to extract JNI handle from TLS.
@@ -82,9 +90,19 @@ extern "C" void* DecodeJObject(void*, jobject) __asm__("DecodeJObject");
 extern "C" void* ComposeInstrumentGadgetTrampoline()
                                         __asm__("ComposeInstrumentGadgetTrampoline");
 
+// The trampoline to the function to marshall the instrument callbacks and the
+// original method call.
+extern "C" void* ArtQuickInstrumentTrampoline()
+                                        __asm__("ArtQuickInstrumentTrampoline");
+
 // The function which launches the composer that will set all the instrument
 // gadgets towards user designated Java methods for instrumentation.
 extern "C" void* ComposeInstrumentGadget(void*, void*, void*, void*, void*);
+
+// The function which marshalls the callbacks including the before and after method
+// execution calls for instrumentation. Also, it will invoke the original method
+// to fulfill the expected behavior of instrumented app.
+extern "C" void* ArtQuickInstrument(void*, void*, void*, void*, void*);
 
 
 // The cached symbols delivered from injector.

@@ -1,0 +1,118 @@
+#!/bin/bash
+#
+# Copyright 2009 The Android Open Source Project
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#      http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+#
+# Script to run all the tests, which only works for host builds. This
+# uses some heuristics to navigate the source tree and built output,
+# and it won't be too surprising if this breaks with some change in
+# the build system.
+#
+
+libName="libffi-host"
+execFile="/tmp/run-test-$$"
+outFile="/tmp/out-test-$$.txt"
+
+
+# Set up prog to be the path of this script, including following symlinks,
+# and set up progdir to be the fully-qualified pathname of its directory.
+
+prog="$0"
+while [ -h "${prog}" ]; do
+    newProg=`/bin/ls -ld "${prog}"`
+    newProg=`expr "${newProg}" : ".* -> \(.*\)$"`
+    if expr "x${newProg}" : 'x/' >/dev/null; then
+        prog="${newProg}"
+    else
+        progdir=`dirname "${prog}"`
+        prog="${progdir}/${newProg}"
+    fi
+done
+origDir=`pwd`
+progDir=`dirname "${prog}"`
+cd "${progDir}"
+progDir=`pwd`
+prog="${progDir}"/`basename "${prog}"`
+
+
+# Find the base directory of the source tree (which is expected to be
+# the first directory found up the tree that contains both an out and
+# a build directory).
+
+while true; do
+    if [ -d out -a -d build ]; then
+        break;
+    fi
+    cd ..
+    if [ "x`pwd`" = "x/" ]; then
+        echo "could not find top of source tree" 1>&2
+        exit 1
+    fi
+done
+
+sourceDir=`pwd`
+
+
+# Find the library, collect the list of test files, and set other variables.
+
+if get_build_var x >/dev/null 2>&1; then
+    : # Already have build system defs.
+else
+    # Pull in envsetup.sh.
+    . build/envsetup.sh
+fi
+
+CC=`get_build_var CC`
+HOST_OS=`get_build_var HOST_OS`
+HOST_ARCH=`get_build_var HOST_ARCH`
+
+# All this is to make the libFile be an absolute path.
+libFile=`find out/host/${HOST_OS}-${HOST_ARCH} -name "${libName}.a" | head -1`
+libDir=`dirname ${libFile}`
+libDir=`cd "$libDir"; pwd`
+libFile="${libDir}/${libName}.a"
+
+if [ "x$libFile" = "x" ]; then
+    echo "could not find ${libName}" 1>&2
+    exit 1
+fi
+
+cd "${progDir}"
+testFiles=`/bin/ls libffi.call/*.c`
+
+echo "$libDir"
+ls "$libDir"
+
+# Iterate over all the files, compiling and running each.
+
+for file in $testFiles; do
+    echo "${file}..."
+    rm -f "$execFile" "$outFile"
+    "$CC" -g -I"../${HOST_OS}-${HOST_ARCH}" -o "$execFile" "$file" "$libFile"
+    #    -L"$libDir" -l"$libName"
+    if [ "$?" != "0" ]; then
+        echo "compilation failure" 1>&2
+    else
+        "$execFile" > "$outFile"
+        if [ "$?" = "0" ]; then
+            echo "${file}: OK"
+        else
+            echo "${file}: FAIL"
+            cat "$outFile"
+        fi
+    fi
+done
+
+rm -f "$execFile" "$outFile"

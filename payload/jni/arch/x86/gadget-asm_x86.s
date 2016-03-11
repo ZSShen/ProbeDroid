@@ -134,3 +134,16 @@ ComposeInstrumentGadgetTrampoline:
     call ComposeInstrumentGadget
     addl $20, %esp
     ret
+
+
+.global ArtQuickInstrumentTrampoline
+.type ArtQuickInstrumentTrampoline, @function
+ArtQuickInstrumentTrampoline:
+    push %esp               # The stack pointer
+    push %ebx               # The second argument
+    push %edx               # The first argument
+    push %eax               # The ArtMethod* pointer
+    push %ecx               # The receiver pointer
+    call ArtQuickInstrument
+    addl $20, %esp
+    ret

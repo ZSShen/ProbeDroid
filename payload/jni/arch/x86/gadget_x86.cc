@@ -1,12 +1,16 @@
+#include <memory>
+#include <mutex>
+
 #include "gadget.h"
 #include "indirect_reference_table.h"
 #include "jni_internal.h"
 #include "mirror/art_method-inl.h"
 #include "logcat.h"
+#include "ffi.h"
 
 
 void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
-                        void *arg_second, void *stk_ptr)
+                              void *arg_second, void *stk_ptr)
 {
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
@@ -49,4 +53,34 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
 
     LOGD("Success");
     return clazz;
+}
+
+void* ArtQuickInstrument(void *obj, void *meth, void *arg_first, void *arg_second,
+                         void *stk_ptr)
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+
+    // Cast JNIEnv* to JNIEnvExt* which is the real data type of JNI handle.
+    JNIEnvExt* env_ext = reinterpret_cast<JNIEnvExt*>(env);
+
+    // Resolve some important members of JNIEnvExt for resource management.
+    uint32_t cookie = env_ext->local_ref_cookie_;
+    IndirectReferenceTable* ref_table = reinterpret_cast<IndirectReferenceTable*>
+                                        (&(env_ext->local_refs_table_));
+    void* thread = env_ext->thread_;
+
+    // Use method pointer as the key to retrieve the instrument gadgets.
+    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
+    auto iter = g_map_method_bundle->find(meth_id);
+    std::unique_ptr<MethodBundleNative>& bundle = iter->second;
+
+    // Ensure that only one thread can process the instrumented method simultaneously.
+    std::mutex& mutex = bundle->GetMutex();
+    {
+        std::lock_guard<std::mutex> guard(mutex);
+        //void (*ptr)() = reinterpret_cast<void(*)()>(env->functions->CallObjectMethod);
+    }
+
+    return nullptr;
 }

@@ -7,17 +7,20 @@ public abstract class Instrument {
         System.load(pathLib);
     }
 
-    public void instrumentMethod(String nameClass, String nameMethod,
-            String signatureMethod, MethodBundle bundle)
-            throws ClassNotFoundException, NoSuchMethodException {
-        instrumentMethodNative(nameClass, nameMethod, signatureMethod, bundle);
+    public void instrumentMethod(boolean isStatic, String nameClass,
+            String nameMethod, String signatureMethod, MethodBundle bundle)
+            throws ClassNotFoundException, NoSuchMethodException,
+            IllegalArgumentException {
+        instrumentMethodNative(isStatic, nameClass, nameMethod,
+                signatureMethod, bundle);
     }
 
     public abstract void onApplicationStart();
 
     public abstract void onApplicationStop();
 
-    private native void instrumentMethodNative(String nameClass,
-            String nameMethod, String signatureMethod, MethodBundle bundle)
-            throws ClassNotFoundException, NoSuchMethodException;
+    private native void instrumentMethodNative(boolean isStatic,
+            String nameClass, String nameMethod, String signatureMethod,
+            MethodBundle bundle) throws ClassNotFoundException,
+            NoSuchMethodException, IllegalArgumentException;
 }
