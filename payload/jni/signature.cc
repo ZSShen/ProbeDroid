@@ -1,11 +1,13 @@
+#include <cstdint>
+
 #include "signature.h"
 
 
-const int kNoData = 0x0;
-const int kDwordInt = 0x1;
-const int kDowrdFloat = 0x2;
-const int kQWordLong = 0x10 ^ 0x1;
-const int kQwordDouble = 0x10 ^ 0x2;
+const uint32_t kNoData = 0x0;
+const uint32_t kDwordInt = 0x1;
+const uint32_t kDowrdFloat = 0x2;
+const uint32_t kQWordLong = 0x10 ^ 0x1;
+const uint32_t kQwordDouble = 0x10 ^ 0x2;
 
 
 void MethodSignatureParser::Parse()
@@ -53,6 +55,8 @@ void MethodSignatureParser::Parse()
                     while (*ofst != kDeliObjectTail)
                         ++ofst;
                 }
+                break;
+            default:
                 break;
         }
         ++ofst;

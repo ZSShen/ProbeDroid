@@ -5,7 +5,6 @@
 
 #include "org_probedroid_instrument.h"
 #include "globals.h"
-#include "signature.h"
 #include "gadget.h"
 #include "mirror/art_method-inl.h"
 #include "logcat.h"
@@ -81,7 +80,7 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     // Parse the method signature to acquire the relevant data types.
     MethodSignatureParser parser(cstr_method_sig);
     parser.Parse();
-    std::vector<char>& type_inputs = parser.GetInputType();
+    const std::vector<char>& type_inputs = parser.GetInputType();
     char type_output = parser.GetOutputType();
 
     MethodBundleNative* bundle_native = new(std::nothrow) MethodBundleNative(

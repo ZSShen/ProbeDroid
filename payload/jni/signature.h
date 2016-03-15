@@ -54,6 +54,11 @@ static const char kTypeDouble = 8;
 static const char kTypeObject = 9;
 static const char kTypeArray = 16;
 
+static const uint32_t kWidthByte = 1;
+static const uint32_t kWidthWord = 2;
+static const uint32_t kWidthDword = 4;
+static const uint32_t kWidthQword = 8;
+
 static const char kDeliSlash = '/';
 static const char kDeliDot = '.';
 static const char kDeliLeftInput = '(';
@@ -80,11 +85,11 @@ static const char* kIndirectReferenceTableRemove =
 static const char* kThreadDecodeJObject =
                     "_ZNK3art6Thread13DecodeJObjectEP8_jobject";
 
-extern const int kNoData;
-extern const int kDwordInt;
-extern const int kDowrdFloat;
-extern const int kQWordLong;
-extern const int kQwordDouble;
+extern const uint32_t kNoData;
+extern const uint32_t kDwordInt;
+extern const uint32_t kDowrdFloat;
+extern const uint32_t kQWordLong;
+extern const uint32_t kQwordDouble;
 
 class MethodSignatureParser
 {
@@ -97,7 +102,7 @@ class MethodSignatureParser
 
     void Parse();
 
-    std::vector<char>& GetInputType()
+    const std::vector<char>& GetInputType()
     {
         return inputs_;
     }

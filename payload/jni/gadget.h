@@ -10,6 +10,8 @@
 #include <mutex>
 #include <jni.h>
 
+#include "signature.h"
+
 
 class InstrumentGadgetComposer
 {
@@ -41,24 +43,61 @@ class MethodBundleNative
       jmethodID meth_after_exec)
      : is_static_(is_static),
        type_output_(type_output),
+       unboxed_input_width_(0),
        meth_before_exec_(meth_before_exec),
        meth_after_exec_(meth_after_exec),
        quick_code_entry_origin_(quick_code_entry_origin),
        name_class_(name_class),
        name_method_(name_method),
        signature_method_(signature_method),
-       type_inputs_(type_output),
+       type_inputs_(type_inputs),
        mutex_()
-    {}
+    {
+        for (char type : type_inputs_) {
+            switch (type) {
+                case kTypeBoolean:
+                case kTypeByte:
+                case kTypeChar:
+                    unboxed_input_width_ += kWidthByte;
+                    break;
+                case kTypeShort:
+                    unboxed_input_width_ += kWidthWord;
+                    break;
+                case kTypeInt:
+                case kTypeFloat:
+                case kTypeObject:
+                case kTypeArray:
+                    unboxed_input_width_ += kWidthDword;
+                    break;
+                case kTypeLong:
+                case kTypeDouble:
+                    unboxed_input_width_ += kWidthQword;
+                    break;
+            }
+        }
+        if (!is_static_)
+            unboxed_input_width_ += kWidthDword;
+    }
 
     std::mutex& GetMutex()
     {
         return mutex_;
     }
 
+    uint32_t GetUnboxedInputWidth()
+    {
+        return unboxed_input_width_;
+    }
+
+    const std::vector<char>& GetInputTypes()
+    {
+        return type_inputs_;
+    }
+
   private:
     bool is_static_;
     char type_output_;
+    uint32_t unboxed_input_width_;
     jmethodID meth_before_exec_;
     jmethodID meth_after_exec_;
     uint64_t quick_code_entry_origin_;
@@ -68,6 +107,7 @@ class MethodBundleNative
     std::vector<char> type_inputs_;
     std::mutex mutex_;
 };
+
 
 // The gadget to extract JNI handle from TLS.
 extern "C" void GetJniEnv(JNIEnv**) __asm__("GetJniEnv");
@@ -102,7 +142,7 @@ extern "C" void* ComposeInstrumentGadget(void*, void*, void*, void*, void*);
 // The function which marshalls the callbacks including the before and after method
 // execution calls for instrumentation. Also, it will invoke the original method
 // to fulfill the expected behavior of instrumented app.
-extern "C" void* ArtQuickInstrument(void**, void**, void*, void*, void*, void*, void**);
+extern "C" void ArtQuickInstrument(void**, void**, void*, void*, void*, void*, void**);
 
 
 // The cached symbols delivered from injector.

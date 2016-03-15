@@ -2,6 +2,7 @@
 #include <mutex>
 
 #include "gadget.h"
+#include "gadget_x86.h"
 #include "indirect_reference_table.h"
 #include "jni_internal.h"
 #include "mirror/art_method-inl.h"
@@ -55,8 +56,8 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     return clazz;
 }
 
-void* ArtQuickInstrument(void **ret_type, void **ret_val, void *obj, void *meth,
-                         void *arg_first, void *arg_second, void **stk_ptr)
+void ArtQuickInstrument(void **ret_type, void **ret_val, void *obj, void *meth,
+                        void *reg_first, void *reg_second, void **stk_ptr)
 {
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
@@ -75,5 +76,11 @@ void* ArtQuickInstrument(void **ret_type, void **ret_val, void *obj, void *meth,
     auto iter = g_map_method_bundle->find(meth_id);
     std::unique_ptr<MethodBundleNative>& bundle = iter->second;
 
-    return nullptr;
+    // Ensure that only one thread can process a specific instrumented method simultaneously.
+    std::mutex& mutex = bundle->GetMutex();
+    {
+        std::lock_guard<std::mutex> guard(mutex);
+        //void (*ptr)() = reinterpret_cast<void(*)()>(env->functions->CallObjectMethod);
+    }
 }
+
