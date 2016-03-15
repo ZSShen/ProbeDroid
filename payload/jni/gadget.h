@@ -102,7 +102,7 @@ extern "C" void* ComposeInstrumentGadget(void*, void*, void*, void*, void*);
 // The function which marshalls the callbacks including the before and after method
 // execution calls for instrumentation. Also, it will invoke the original method
 // to fulfill the expected behavior of instrumented app.
-extern "C" void* ArtQuickInstrument(void*, void*, void*, void*, void*);
+extern "C" void* ArtQuickInstrument(void**, void**, void*, void*, void*, void*, void**);
 
 
 // The cached symbols delivered from injector.

@@ -1,6 +1,13 @@
 #include "signature.h"
 
 
+const int kNoData = 0x0;
+const int kDwordInt = 0x1;
+const int kDowrdFloat = 0x2;
+const int kQWordLong = 0x10 ^ 0x1;
+const int kQwordDouble = 0x10 ^ 0x2;
+
+
 void MethodSignatureParser::Parse()
 {
     // Parse the input types.

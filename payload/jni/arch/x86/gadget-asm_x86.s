@@ -126,7 +126,8 @@ DecodeJObject:
 .global ComposeInstrumentGadgetTrampoline
 .type ComposeInstrumentGadgetTrampoline, @function
 ComposeInstrumentGadgetTrampoline:
-    push %esp               # The stack pointer
+    push %esp               # The stack pointer (should be accessed via
+                            # %esp + 5 to retrieve the passed arguments.)
     push %ebx               # The second argument
     push %edx               # The first argument
     push %eax               # The ArtMethod* pointer
@@ -139,11 +140,56 @@ ComposeInstrumentGadgetTrampoline:
 .global ArtQuickInstrumentTrampoline
 .type ArtQuickInstrumentTrampoline, @function
 ArtQuickInstrumentTrampoline:
-    push %esp               # The stack pointer
+                            # Since we need %esi to release the register pressure,
+    push %esi               # we stash its content on the stack temporarily.
+
+    subl $12, %esp          # Create the space for 3 local DWORDs.
+
+    push %esp               # The stack pointer (should be accessed via
+                            # %esp + 5 + 3 + 1 to retrieve the passed arguments.)
     push %ebx               # The second argument
     push %edx               # The first argument
     push %eax               # The ArtMethod* pointer
     push %ecx               # The receiver pointer
+
+    movl %esp, %esi         # Pass the address of the first DOWRD which should
+    addl $20, %esi          # be updated with the data type of the return value.
+    push %esi
+
+    addl $8, %esi           # Pass the address of the second QWORD which should
+    push %esi               # be updated with the return value.
+
     call ArtQuickInstrument
-    addl $20, %esp
+
+    addl $28, %esp          # To fit the calling convention defined by Android
+    movl 8(%esp), %esi      # Runtime, we must store the return value to
+    cmpl kNoData, %esi      # different registers based on its data type.
+    je EXIT
+
+    cmpl kQwordDouble, %esi
+    je QWORD_DOUBLE
+    cmpl kQWordLong, %esi
+    je QWORD_LONG
+    cmpl kDowrdFloat, %esi
+    je DWORD_FLOAT
+
+DWORD_INT:                  # For the non floating point data type with width
+    movl (%esp), %eax       # less than or equal to 32 bit, put the return value
+    jmp EXIT                # in %eax.
+
+DWORD_FLOAT:
+    movd (%esp), %xmm0      # For the floating point data type with width equal
+    jmp EXIT                # to 32 bit, put the return value in %xmm0.
+
+QWORD_LONG:                 # For the non floating point data type with width
+    movl (%esp), %eax       # equal to 64 bit, put the return value in %edx:%eax.
+    movl 4(%esp), %edx
+    jmp EXIT
+
+QWORD_DOUBLE:               # For the floating point data type with width equal
+    movq (%esp), %xmm0      # to 64 bit, put the return value in %xmm0.
+
+EXIT:
+    addl $12, %esp
+    pop %esi
     ret

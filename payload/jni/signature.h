@@ -80,6 +80,11 @@ static const char* kIndirectReferenceTableRemove =
 static const char* kThreadDecodeJObject =
                     "_ZNK3art6Thread13DecodeJObjectEP8_jobject";
 
+extern const int kNoData;
+extern const int kDwordInt;
+extern const int kDowrdFloat;
+extern const int kQWordLong;
+extern const int kQwordDouble;
 
 class MethodSignatureParser
 {
