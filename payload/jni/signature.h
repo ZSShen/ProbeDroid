@@ -7,8 +7,16 @@
 // Cache some commonly used Java signatures for method invocation.
 static const char* kNormClassLoader = "java/lang/ClassLoader";
 static const char* kNormDexClassLoader = "dalvik/system/DexClassLoader";
-static const char* kNormObject = "java/lang/Object";
 static const char* kNormDexFile = "dalvik/system/DexFile";
+static const char* kNormObject = "java/lang/Object";
+static const char* kNormBoolean = "java/lang/Boolean";
+static const char* kNormByte = "java/lang/Byte";
+static const char* kNormChar = "java/lang/Character";
+static const char* kNormShort = "java/lang/Short";
+static const char* kNormInt = "java/lang/Integer";
+static const char* kNormLong = "java/lang/Long";
+static const char* kNormFloat = "java/lang/Float";
+static const char* kNormDouble = "java/lang/Double";
 
 static const char* kFuncConstructor = "<init>";
 static const char* kFuncGetSystemClassLoader = "getSystemClassLoader";
@@ -18,14 +26,32 @@ static const char* kFuncLoadDex = "loadDex";
 static const char* kFuncEntries = "entries";
 static const char* kFuncHasMoreElements = "hasMoreElements";
 static const char* kFuncNextElement = "nextElement";
+static const char* kFuncBooleanValue = "booleanValue";
+static const char* kFuncByteValue = "byteValue";
+static const char* kFuncCharValue = "charValue";
+static const char* kFuncShortValue = "shortValue";
+static const char* kFuncIntValue = "intValue";
+static const char* kFuncLongValue = "longValue";
+static const char* kFuncFloatValue = "floatValue";
+static const char* kFuncDoubleValue = "doubleValue";
 
 static const char* kSigClassLoader = "Ljava/lang/ClassLoader;";
 static const char* kSigDexClassLoader = "Ldalvik/system/DexClassLoader;";
 static const char* kSigString = "Ljava/lang/String;";
 static const char* kSigClass = "Ljava/lang/Class;";
 static const char* kSigDexFile = "Ldalvik/system/DexFile;";
-static const char* kSigEnumeration = "Ljava/util/Enumeration;";
+
 static const char* kSigObjectLong = "Ljava/lang/Object;";
+static const char* kSigBooleanObject = "Ljava/lang/Boolean;";
+static const char* kSigByteObject = "Ljava/lang/Byte;";
+static const char* kSigCharObject = "Ljava/lang/Character;";
+static const char* kSigShortObject = "Ljava/lang/Short;";
+static const char* kSigIntObject = "Ljava/lang/Integer;";
+static const char* kSigLongObject = "Ljava/lang/Long;";
+static const char* kSigFloatObject = "Ljava/lang/Float;";
+static const char* kSigDoubleObject = "Ljava/lang/Double;";
+
+static const char* kSigEnumeration = "Ljava/util/Enumeration;";
 static const char* kSigIllegalArgument = "Ljava/lang/IllegalArgumentException;";
 static const char* kSigClassNotFound = "Ljava/lang/ClassNotFoundException;";
 static const char* kSigNoSuchMethod = "Ljava/lang/NoSuchMethodException";
@@ -52,12 +78,9 @@ static const char kTypeLong = 6;
 static const char kTypeFloat = 7;
 static const char kTypeDouble = 8;
 static const char kTypeObject = 9;
-static const char kTypeArray = 16;
 
-static const uint32_t kWidthByte = 1;
-static const uint32_t kWidthWord = 2;
-static const uint32_t kWidthDword = 4;
-static const uint32_t kWidthQword = 8;
+static const uint32_t kWidthDword = 1;
+static const uint32_t kWidthQword = 2;
 
 static const char kDeliSlash = '/';
 static const char kDeliDot = '.';

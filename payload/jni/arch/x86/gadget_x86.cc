@@ -3,11 +3,11 @@
 
 #include "gadget.h"
 #include "gadget_x86.h"
-#include "indirect_reference_table.h"
-#include "jni_internal.h"
 #include "mirror/art_method-inl.h"
 #include "logcat.h"
 #include "ffi.h"
+#include "globals.h"
+#include "jni_except.h"
 
 
 void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
@@ -40,6 +40,9 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     InstrumentGadgetComposer composer(env, ref_obj, meth_id);
     composer.Compose();
 
+    // Cache the access information about all the wrappers of Java primitive types.
+    PrimitiveTypeWrapper::LoadWrappers(env);
+
     // Let "loadClass()" finish its original task. The "android.app.Application"
     // will be returned.
     jobject ref_clazz = env->CallObjectMethod(ref_obj, meth_id, ref_arg_first);
@@ -56,7 +59,7 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     return clazz;
 }
 
-void ArtQuickInstrument(void **ret_type, void **ret_val, void *obj, void *meth,
+void ArtQuickInstrument(void **ret_type, void **ret_val, void *receiver, void *meth,
                         void *reg_first, void *reg_second, void **stk_ptr)
 {
     JNIEnv* env;
@@ -84,3 +87,139 @@ void ArtQuickInstrument(void **ret_type, void **ret_val, void *obj, void *meth,
     }
 }
 
+void InputMarshaller::Flatten()
+{
+    if (unboxed_input_width_ == 0)
+        return;
+
+    off_t idx = 0;
+    uint32_t rest;
+    if (receiver_) {
+        // Handle non-static methods.
+        if (unboxed_input_width_ >= 1)
+            unboxed_inputs_[idx++] = receiver_;
+        if (unboxed_input_width_ >= 2)
+            unboxed_inputs_[idx++] = reg_first_;
+        if (unboxed_input_width_ >= 3)
+            unboxed_inputs_[idx++] = reg_second_;
+        rest = unboxed_input_width_ - 3;
+    } else {
+        // Handle static methods.
+        if (unboxed_input_width_ >= 1)
+            unboxed_inputs_[idx++] = reg_first_;
+        if (unboxed_input_width_ >= 2)
+            unboxed_inputs_[idx++] = reg_second_;
+        rest = unboxed_input_width_ - 2;
+    }
+    while (rest > 0) {
+        unboxed_inputs_[idx++] = *stk_ptr_++;
+        --rest;
+    }
+}
+
+bool InputMarshaller::BoxInputs()
+{
+    // Create an array of "java.lang.Object" which stores the boxed inputs.
+    jclass clazz = env_->FindClass(kSigObjectLong);
+    CHK_EXCP(env_);
+    boxed_inputs_ = env_->NewObjectArray(count_input_, clazz, nullptr);
+    CHK_EXCP(env_);
+
+    // Helpers for resource clean when JNI exception occurs.
+    std::vector<jobject> prim;
+    std::vector<jobject> nonprim;
+
+    // Scanning pointer for boxing process.
+    void** scan = unboxed_inputs_.get();
+    if (receiver_)
+        ++scan;
+
+    // Box each argument by referencing its original data type.
+    off_t idx = 0;
+    for (char type : ref_input_type_) {
+        auto iter = g_map_type_wrapper->find(type);
+        std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
+        jclass clazz = wrapper->GetClass();
+        jmethodID meth_ctor = wrapper->GetConstructor();
+        jobject obj;
+
+        switch (type) {
+            case kTypeBoolean: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jboolean real = static_cast<jboolean>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                break;
+            }
+            case kTypeByte: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jbyte real = static_cast<jbyte>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                break;
+            }
+            case kTypeChar: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jchar real = static_cast<jchar>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                break;
+            }
+            case kTypeShort: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jshort real = static_cast<jshort>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                break;
+            }
+            case kTypeInt: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jint real = static_cast<jint>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                break;
+            }
+            case kTypeFloat: {
+                jfloat* deref = reinterpret_cast<jfloat*>(scan++);
+                jfloat real = *deref;
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                break;
+            }
+            case kTypeLong: {
+                jlong* deref = reinterpret_cast<jlong*>(scan);
+                jlong real = *deref;
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeDouble: {
+                jdouble* deref = reinterpret_cast<jdouble*>(scan);
+                jdouble real = *deref;
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                prim.push_back(obj);
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeObject: {
+                void* ptr_obj = *scan++;
+                obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
+                nonprim.push_back(obj);
+                break;
+            }
+        }
+
+        env_->SetObjectArrayElement(boxed_inputs_, idx++, obj);
+    }
+
+    return PROC_SUCC;
+}

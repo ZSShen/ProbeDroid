@@ -54,26 +54,10 @@ class MethodBundleNative
        mutex_()
     {
         for (char type : type_inputs_) {
-            switch (type) {
-                case kTypeBoolean:
-                case kTypeByte:
-                case kTypeChar:
-                    unboxed_input_width_ += kWidthByte;
-                    break;
-                case kTypeShort:
-                    unboxed_input_width_ += kWidthWord;
-                    break;
-                case kTypeInt:
-                case kTypeFloat:
-                case kTypeObject:
-                case kTypeArray:
-                    unboxed_input_width_ += kWidthDword;
-                    break;
-                case kTypeLong:
-                case kTypeDouble:
-                    unboxed_input_width_ += kWidthQword;
-                    break;
-            }
+            if ((type == kTypeLong) || (type == kTypeDouble))
+                unboxed_input_width_ += kWidthQword;
+            else
+                unboxed_input_width_ += kWidthDword;
         }
         if (!is_static_)
             unboxed_input_width_ += kWidthDword;
@@ -106,6 +90,38 @@ class MethodBundleNative
     std::string signature_method_;
     std::vector<char> type_inputs_;
     std::mutex mutex_;
+};
+
+class PrimitiveTypeWrapper
+{
+  public:
+    PrimitiveTypeWrapper(jclass clazz, jmethodID meth_ctor, jmethodID meth_access)
+     : clazz_(clazz),
+       meth_ctor_(meth_ctor),
+       meth_access_(meth_access)
+    {}
+
+    jclass GetClass()
+    {
+        return clazz_;
+    }
+
+    jmethodID GetConstructor()
+    {
+        return meth_ctor_;
+    }
+
+    jmethodID GetAccessor()
+    {
+        return meth_access_;
+    }
+
+    static bool LoadWrappers(JNIEnv*);
+
+  private:
+    jclass clazz_;
+    jmethodID meth_ctor_;
+    jmethodID meth_access_;
 };
 
 
@@ -174,5 +190,11 @@ extern jobject g_obj_analysis_main;
 typedef std::unique_ptr<std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>>
         PtrBundleMap;
 extern PtrBundleMap g_map_method_bundle;
+
+// The global map to cache the access information about all the wrappers of
+// primitive Java types.
+typedef std::unique_ptr<std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>>
+        PtrTypeMap;
+extern PtrTypeMap g_map_type_wrapper;
 
 #endif
