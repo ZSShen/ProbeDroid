@@ -22,6 +22,7 @@ class Bootstrap
     bool CraftDexPrivatePath();
     bool CreateDexPrivateDir();
     bool CacheJVM();
+    bool CacheHotJavaTypes();
     bool LoadAnalysisModule();
     bool ResolveArtSymbol();
     bool DeployInstrumentGadgetComposer();

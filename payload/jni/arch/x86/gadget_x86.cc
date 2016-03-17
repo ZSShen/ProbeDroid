@@ -1,5 +1,6 @@
 #include <memory>
 #include <mutex>
+#include <cstdlib>
 
 #include "gadget.h"
 #include "gadget_x86.h"
@@ -40,9 +41,6 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     InstrumentGadgetComposer composer(env, ref_obj, meth_id);
     composer.Compose();
 
-    // Cache the access information about all the wrappers of Java primitive types.
-    PrimitiveTypeWrapper::LoadWrappers(env);
-
     // Let "loadClass()" finish its original task. The "android.app.Application"
     // will be returned.
     jobject ref_clazz = env->CallObjectMethod(ref_obj, meth_id, ref_arg_first);
@@ -77,14 +75,25 @@ void ArtQuickInstrument(void **ret_type, void **ret_val, void *receiver, void *m
     // Use method pointer as the key to retrieve the instrument gadgets.
     jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
     auto iter = g_map_method_bundle->find(meth_id);
-    std::unique_ptr<MethodBundleNative>& bundle = iter->second;
+    std::unique_ptr<MethodBundleNative>& bundle_native = iter->second;
 
-    // Ensure that only one thread can process a specific instrumented method simultaneously.
-    std::mutex& mutex = bundle->GetMutex();
-    {
-        std::lock_guard<std::mutex> guard(mutex);
-        //void (*ptr)() = reinterpret_cast<void(*)()>(env->functions->CallObjectMethod);
-    }
+    // Create the input marshaller to box the arguments for instrument callback.
+    const std::vector<char>& ref_input_type = bundle_native->GetInputTypes();
+    int32_t unboxed_input_width = bundle_native->GetUnboxedInputWidth();
+    InputMarshaller input_marshaller(env, ref_input_type.size(), unboxed_input_width,
+        ref_input_type, receiver, reg_first, reg_second, stk_ptr + kStackAlignment);
+
+    input_marshaller.Flatten();
+    // TODO: Should check for boxing error and handle the exception.
+    input_marshaller.BoxInputs();
+
+    // Launch the callback to instrument input arguments.
+    jobject bundle_java = bundle_native->GetBundleObject();
+    jmethodID meth_before_exec = bundle_native->GetBeforeExecuteCallback();
+    jobjectArray boxed_input = input_marshaller.GetBoxedInputs();
+    // TODO: Handle the invocation exception.
+    env->CallVoidMethod(bundle_java, meth_before_exec, boxed_input);
+    LOGD("Test OK");
 }
 
 void InputMarshaller::Flatten()
@@ -93,7 +102,7 @@ void InputMarshaller::Flatten()
         return;
 
     off_t idx = 0;
-    uint32_t rest;
+    int32_t rest;
     if (receiver_) {
         // Handle non-static methods.
         if (unboxed_input_width_ >= 1)
@@ -120,8 +129,9 @@ void InputMarshaller::Flatten()
 bool InputMarshaller::BoxInputs()
 {
     // Create an array of "java.lang.Object" which stores the boxed inputs.
-    jclass clazz = env_->FindClass(kSigObjectLong);
-    CHK_EXCP(env_);
+    std::string sig_class(kNormObject);
+    auto iter = g_map_class_cache->find(sig_class);
+    jclass clazz = iter->second->GetClass();
     boxed_inputs_ = env_->NewObjectArray(count_input_, clazz, nullptr);
     CHK_EXCP(env_);
 
@@ -137,11 +147,15 @@ bool InputMarshaller::BoxInputs()
     // Box each argument by referencing its original data type.
     off_t idx = 0;
     for (char type : ref_input_type_) {
-        auto iter = g_map_type_wrapper->find(type);
-        std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
-        jclass clazz = wrapper->GetClass();
-        jmethodID meth_ctor = wrapper->GetConstructor();
+        jmethodID meth_ctor;
+        jclass clazz;
         jobject obj;
+        if (type != kTypeObject) {
+            auto iter = g_map_primitive_wrapper->find(type);
+            std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
+            clazz = wrapper->GetClass();
+            meth_ctor = wrapper->GetConstructor();
+        }
 
         switch (type) {
             case kTypeBoolean: {

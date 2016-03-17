@@ -9,14 +9,17 @@ static const char* kNormClassLoader = "java/lang/ClassLoader";
 static const char* kNormDexClassLoader = "dalvik/system/DexClassLoader";
 static const char* kNormDexFile = "dalvik/system/DexFile";
 static const char* kNormObject = "java/lang/Object";
-static const char* kNormBoolean = "java/lang/Boolean";
-static const char* kNormByte = "java/lang/Byte";
-static const char* kNormChar = "java/lang/Character";
-static const char* kNormShort = "java/lang/Short";
-static const char* kNormInt = "java/lang/Integer";
-static const char* kNormLong = "java/lang/Long";
-static const char* kNormFloat = "java/lang/Float";
-static const char* kNormDouble = "java/lang/Double";
+static const char* kNormBooleanObject = "java/lang/Boolean";
+static const char* kNormByteObject = "java/lang/Byte";
+static const char* kNormCharObject = "java/lang/Character";
+static const char* kNormShortObject = "java/lang/Short";
+static const char* kNormIntObject = "java/lang/Integer";
+static const char* kNormLongObject = "java/lang/Long";
+static const char* kNormFloatObject = "java/lang/Float";
+static const char* kNormDoubleObject = "java/lang/Double";
+static const char* kNormIllegalArgument = "java/lang/IllegalArgumentException";
+static const char* kNormClassNotFound = "java/lang/ClassNotFoundException";
+static const char* kNormNoSuchMethod = "java/lang/NoSuchMethodException";
 
 static const char* kFuncConstructor = "<init>";
 static const char* kFuncGetSystemClassLoader = "getSystemClassLoader";
@@ -41,7 +44,7 @@ static const char* kSigString = "Ljava/lang/String;";
 static const char* kSigClass = "Ljava/lang/Class;";
 static const char* kSigDexFile = "Ldalvik/system/DexFile;";
 
-static const char* kSigObjectLong = "Ljava/lang/Object;";
+static const char* kSigObjectObject = "Ljava/lang/Object;";
 static const char* kSigBooleanObject = "Ljava/lang/Boolean;";
 static const char* kSigByteObject = "Ljava/lang/Byte;";
 static const char* kSigCharObject = "Ljava/lang/Character;";
@@ -50,11 +53,7 @@ static const char* kSigIntObject = "Ljava/lang/Integer;";
 static const char* kSigLongObject = "Ljava/lang/Long;";
 static const char* kSigFloatObject = "Ljava/lang/Float;";
 static const char* kSigDoubleObject = "Ljava/lang/Double;";
-
 static const char* kSigEnumeration = "Ljava/util/Enumeration;";
-static const char* kSigIllegalArgument = "Ljava/lang/IllegalArgumentException;";
-static const char* kSigClassNotFound = "Ljava/lang/ClassNotFoundException;";
-static const char* kSigNoSuchMethod = "Ljava/lang/NoSuchMethodException";
 
 static const char kSigVoid = 'V';
 static const char kSigBoolean = 'Z';

@@ -20,7 +20,7 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
         env->IsSameObject(name_method, nullptr) == JNI_TRUE ||
         env->IsSameObject(signature_method, nullptr) == JNI_TRUE ||
         env->IsSameObject(bundle, nullptr) == JNI_TRUE)
-        CHK_EXCP_AND_RETHROW(g_jvm, env, kSigIllegalArgument);
+        CHK_EXCP_AND_RETHROW(g_jvm, env, kNormIllegalArgument);
 
     const char* cstr_class_name = env->GetStringUTFChars(name_class, &is_copy);
     const char* cstr_method_name = env->GetStringUTFChars(name_method, &is_copy);
@@ -38,13 +38,13 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
 
     // Resolve the to be instrumented method.
     jclass clazz = env->FindClass(sig);
-    CHK_EXCP_AND_RETHROW(g_jvm, env, kSigClassNotFound);
+    CHK_EXCP_AND_RETHROW(g_jvm, env, kNormClassNotFound);
     jmethodID meth_tge;
     if (is_static)
         meth_tge = env->GetStaticMethodID(clazz, cstr_method_name, cstr_method_sig);
     else
         meth_tge = env->GetMethodID(clazz, cstr_method_name, cstr_method_sig);
-    CHK_EXCP_AND_RETHROW(g_jvm, env, kSigNoSuchMethod);
+    CHK_EXCP_AND_RETHROW(g_jvm, env, kNormNoSuchMethod);
 
     // Get the entry point to the quick compiled code of that method.
     art::ArtMethod *art_meth = reinterpret_cast<art::ArtMethod*>(meth_tge);
@@ -57,9 +57,9 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
 
     snprintf(sig, kBlahSizeMid, "%c", kSigBoolean);
     jfieldID fld_before = env->GetFieldID(clazz_bundle, kFieldInterceptBefore, sig);
-    CHK_EXCP_AND_RETHROW(g_jvm, env, kSigIllegalArgument);
+    CHK_EXCP_AND_RETHROW(g_jvm, env, kNormIllegalArgument);
     jfieldID fld_after = env->GetFieldID(clazz_bundle, kFieldInterceptAfter, sig);
-    CHK_EXCP_AND_RETHROW(g_jvm, env, kSigIllegalArgument);
+    CHK_EXCP_AND_RETHROW(g_jvm, env, kNormIllegalArgument);
 
     jboolean before = env->GetBooleanField(bundle, fld_before);
     jboolean after = env->GetBooleanField(bundle, fld_after);
@@ -67,14 +67,14 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     // Get the entry points to the quick compiled code of the instrument callbacks.
     jmethodID meth_before, meth_after;
     if (before) {
-        snprintf(sig, kBlahSizeMid, "(%c%s)%c", kSigArray, kSigObjectLong, kSigVoid);
+        snprintf(sig, kBlahSizeMid, "(%c%s)%c", kSigArray, kSigObjectObject, kSigVoid);
         meth_before = env->GetMethodID(clazz_bundle, kFuncBeforeMethodExecute, sig);
-        CHK_EXCP_AND_RETHROW(g_jvm, env, kSigIllegalArgument);
+        CHK_EXCP_AND_RETHROW(g_jvm, env, kNormIllegalArgument);
     }
     if (after) {
-        snprintf(sig, kBlahSizeMid, "(%s)%c", kSigObjectLong, kSigVoid);
+        snprintf(sig, kBlahSizeMid, "(%s)%c", kSigObjectObject, kSigVoid);
         meth_after = env->GetMethodID(clazz_bundle, kFuncAfterMethodExecute, sig);
-        CHK_EXCP_AND_RETHROW(g_jvm, env, kSigIllegalArgument);
+        CHK_EXCP_AND_RETHROW(g_jvm, env, kNormIllegalArgument);
     }
 
     // Parse the method signature to acquire the relevant data types.
@@ -83,14 +83,20 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     const std::vector<char>& type_inputs = parser.GetInputType();
     char type_output = parser.GetOutputType();
 
+    jobject g_bundle = env->NewGlobalRef(bundle);
     MethodBundleNative* bundle_native = new(std::nothrow) MethodBundleNative(
         is_static, cstr_class_name, cstr_method_name, cstr_method_sig,
-        type_inputs, type_output, entry_origin, meth_before, meth_after);
+        type_inputs, type_output, entry_origin, g_bundle, meth_before, meth_after);
     // TODO: Out of memory check and message logging.
     if (!bundle_native)
         return;
 
     g_map_method_bundle->insert(std::make_pair(meth_tge,
                            std::unique_ptr<MethodBundleNative>(bundle_native)));
+
+    // Replace the entry of quick compiled code by our instrument trampoline.
+    uint64_t entry_instrument = reinterpret_cast<uint64_t>(ArtQuickInstrumentTrampoline);
+    art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry_instrument);
+
     return;
 }

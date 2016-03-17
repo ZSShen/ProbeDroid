@@ -10,20 +10,13 @@
 inline void LogException(JNIEnv *env, jthrowable except, const char* name_file,
                          const int line_num)
 {
-    jclass clazz = env->FindClass(kNormObject);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
+    std::string sig_class(kNormObject);
+    auto iter_class = g_map_class_cache->find(kNormObject);
     char sig[kBlahSizeMid];
-    snprintf(sig, kBlahSizeMid, "()%s", kSigString);
-    jmethodID meth = env->GetMethodID(clazz, kFuncToString, sig);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
+    snprintf(sig, kBlahSizeMid, "%s()%s", kFuncToString, kSigString);
+    std::string sig_method(sig);
+    jmethodID meth = iter_class->second->GetCachedMethod(sig_method);
+
     jstring str = reinterpret_cast<jstring>(env->CallObjectMethod(except, meth));
     if (env->ExceptionCheck()) {
         env->ExceptionClear();
@@ -31,29 +24,22 @@ inline void LogException(JNIEnv *env, jthrowable except, const char* name_file,
         return;
     }
     jboolean is_copy = JNI_FALSE;
-    const char* cstr = env->GetStringUTFChars(str, &is_copy);
+    const char* msg = env->GetStringUTFChars(str, &is_copy);
 
-    LOGD("%s:%d\n%s\n", name_file, line_num, cstr);
+    LOGD("%s:%d\n%s\n", name_file, line_num, msg);
     return;
 }
 
 inline void ThrowException(JNIEnv *env, const char *type_except, jthrowable except,
                            const char* name_file, const int line_num)
 {
-    jclass clazz = env->FindClass(kNormObject);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
+    std::string sig_class_obj(kNormObject);
+    auto iter_class = g_map_class_cache->find(sig_class_obj);
     char sig[kBlahSizeMid];
-    snprintf(sig, kBlahSizeMid, "()%s", kSigString);
-    jmethodID meth = env->GetMethodID(clazz, kFuncToString, sig);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
+    snprintf(sig, kBlahSizeMid, "%s()%s", kFuncToString, kSigString);
+    std::string sig_method(sig);
+    jmethodID meth = iter_class->second->GetCachedMethod(sig_method);
+
     jstring str = reinterpret_cast<jstring>(env->CallObjectMethod(except, meth));
     if (env->ExceptionCheck()) {
         env->ExceptionClear();
@@ -61,17 +47,14 @@ inline void ThrowException(JNIEnv *env, const char *type_except, jthrowable exce
         return;
     }
     jboolean is_copy = JNI_FALSE;
-    const char* cstr = env->GetStringUTFChars(str, &is_copy);
+    const char* msg = env->GetStringUTFChars(str, &is_copy);
 
-    LOGD("%s:%d\n%s\n", name_file, line_num, cstr);
+    LOGD("%s:%d\n%s\n", name_file, line_num, msg);
 
-    clazz = env->FindClass(type_except);
-    if (env->ExceptionCheck()) {
-        env->ExceptionClear();
-        LOGD("%s\n", kRecursiveExcept);
-        return;
-    }
-    env->ThrowNew(clazz, cstr);
+    std::string sig_class_except(type_except);
+    iter_class = g_map_class_cache->find(sig_class_except);
+    jclass clazz = iter_class->second->GetClass();
+    env->ThrowNew(clazz, msg);
 
     return;
 }

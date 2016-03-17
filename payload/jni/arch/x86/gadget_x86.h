@@ -11,11 +11,14 @@
 #include "jni_internal.h"
 
 
+static const constexpr int32_t kStackAlignment = 5 + 3 + 1;
+
+
 // TODO: Need to redesign the constructor for exception safety later.
 class InputMarshaller
 {
   public:
-    InputMarshaller(JNIEnv *env, uint32_t count_input, uint32_t unboxed_input_width,
+    InputMarshaller(JNIEnv *env, int32_t count_input, int32_t unboxed_input_width,
                     const std::vector<char>& ref_input_type, void* receiver,
                     void* reg_first, void* reg_second, void** stk_ptr)
      : count_input_(count_input),
@@ -66,8 +69,8 @@ class InputMarshaller
         } while (0);
 
   private:
-    uint32_t count_input_;
-    uint32_t unboxed_input_width_;
+    int32_t count_input_;
+    int32_t unboxed_input_width_;
     void* receiver_;
     void* reg_first_;
     void* reg_second_;

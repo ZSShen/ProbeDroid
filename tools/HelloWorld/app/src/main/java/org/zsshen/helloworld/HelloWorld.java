@@ -8,9 +8,9 @@ public class HelloWorld extends Instrument {
     @Override
     public void onApplicationStart() {
         // Instrument "String StringBuilder.toString()".
-        String nameClass = "java.lang.StringBuilder";
-        String nameMethod = "toString";
-        String signatureMethod = "()Ljava/lang/String;";
+        String nameClass = "java.lang.StringBuffer";
+        String nameMethod = "append";
+        String signatureMethod = "(Ljava/lang/String;)Ljava/lang/StringBuffer;";
 
         StringBuilderToString bundleSBToString = new StringBuilderToString(true,
                 true);

@@ -130,6 +130,30 @@ bool Bootstrap::CacheJVM()
     return (env->GetJavaVM(&g_jvm) == JNI_OK)? PROC_SUCC : PROC_FAIL;
 }
 
+bool Bootstrap::CacheHotJavaTypes()
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+
+    typedef std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>
+            PrimitiveMap;
+    PrimitiveMap* primitive_map = new(std::nothrow)PrimitiveMap();
+    if (!primitive_map)
+        return PROC_FAIL;
+    g_map_primitive_wrapper.reset(primitive_map);
+
+    typedef std::unordered_map<std::string, std::unique_ptr<ClassCache>>
+            ClassMap;
+    ClassMap* class_map = new(std::nothrow)ClassMap();
+    if (!class_map)
+        return PROC_FAIL;
+    g_map_class_cache.reset(class_map);
+
+    if (PrimitiveTypeWrapper::LoadWrappers(env) != PROC_SUCC)
+        return PROC_FAIL;
+    return ClassCache::LoadClasses(env);
+}
+
 bool Bootstrap::LoadAnalysisModule()
 {
     JNIEnv* env;
@@ -300,6 +324,10 @@ void __attribute__((constructor)) HookEntry()
 
     // Retrieve the JVM handle which is necessary for the JNI interaction later.
     if (bootstrap.CacheJVM() != PROC_SUCC)
+        return;
+
+    // Cache the access information about some hot Java types.
+    if (bootstrap.CacheHotJavaTypes() != PROC_SUCC)
         return;
 
     // Load our instrumentation module.

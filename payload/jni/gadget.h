@@ -11,6 +11,7 @@
 #include <jni.h>
 
 #include "signature.h"
+#include "logcat.h"
 
 
 class InstrumentGadgetComposer
@@ -39,11 +40,12 @@ class MethodBundleNative
   public:
     MethodBundleNative(bool is_static, const char* name_class, const char* name_method,
       const char* signature_method, const std::vector<char>& type_inputs, char type_output,
-      uint64_t quick_code_entry_origin, jmethodID meth_before_exec,
+      uint64_t quick_code_entry_origin, jobject bundle, jmethodID meth_before_exec,
       jmethodID meth_after_exec)
      : is_static_(is_static),
        type_output_(type_output),
        unboxed_input_width_(0),
+       bundle_(bundle),
        meth_before_exec_(meth_before_exec),
        meth_after_exec_(meth_after_exec),
        quick_code_entry_origin_(quick_code_entry_origin),
@@ -63,12 +65,14 @@ class MethodBundleNative
             unboxed_input_width_ += kWidthDword;
     }
 
+    ~MethodBundleNative();
+
     std::mutex& GetMutex()
     {
         return mutex_;
     }
 
-    uint32_t GetUnboxedInputWidth()
+    int32_t GetUnboxedInputWidth()
     {
         return unboxed_input_width_;
     }
@@ -78,10 +82,31 @@ class MethodBundleNative
         return type_inputs_;
     }
 
+    jobject GetBundleObject()
+    {
+        return bundle_;
+    }
+
+    jmethodID GetBeforeExecuteCallback()
+    {
+        return meth_before_exec_;
+    }
+
+    jmethodID GetAfterExecuteCallback()
+    {
+        return meth_after_exec_;
+    }
+
+    uint64_t GetQuickCodeOriginalEntry()
+    {
+        return quick_code_entry_origin_;
+    }
+
   private:
     bool is_static_;
     char type_output_;
-    uint32_t unboxed_input_width_;
+    int32_t unboxed_input_width_;
+    jobject bundle_;
     jmethodID meth_before_exec_;
     jmethodID meth_after_exec_;
     uint64_t quick_code_entry_origin_;
@@ -100,6 +125,8 @@ class PrimitiveTypeWrapper
        meth_ctor_(meth_ctor),
        meth_access_(meth_access)
     {}
+
+    ~PrimitiveTypeWrapper();
 
     jclass GetClass()
     {
@@ -122,6 +149,39 @@ class PrimitiveTypeWrapper
     jclass clazz_;
     jmethodID meth_ctor_;
     jmethodID meth_access_;
+};
+
+class ClassCache
+{
+  public:
+    ClassCache(jclass clazz)
+     : clazz_(clazz),
+       map_meth_()
+    {}
+
+    ~ClassCache();
+
+    jclass GetClass()
+    {
+        return clazz_;
+    }
+
+    void CacheMethod(const std::string& signature, jmethodID meth)
+    {
+        map_meth_.insert(std::make_pair(signature, meth));
+    }
+
+    jmethodID GetCachedMethod(const std::string& signature)
+    {
+        auto iter = map_meth_.find(signature);
+        return (iter != map_meth_.end())? iter->second : 0;
+    }
+
+    static bool LoadClasses(JNIEnv*);
+
+  private:
+    jclass clazz_;
+    std::unordered_map<std::string, jmethodID> map_meth_;
 };
 
 
@@ -194,7 +254,12 @@ extern PtrBundleMap g_map_method_bundle;
 // The global map to cache the access information about all the wrappers of
 // primitive Java types.
 typedef std::unique_ptr<std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>>
-        PtrTypeMap;
-extern PtrTypeMap g_map_type_wrapper;
+        PtrPrimitiveMap;
+extern PtrPrimitiveMap g_map_primitive_wrapper;
+
+// The global map to cache the frequently used classes and method ids.
+typedef std::unique_ptr<std::unordered_map<std::string, std::unique_ptr<ClassCache>>>
+        PtrClassMap;
+extern PtrClassMap g_map_class_cache;
 
 #endif

@@ -34,7 +34,10 @@ PtrBundleMap g_map_method_bundle(nullptr);
 
 // The global map to cache the access information about all the wrappers of
 // primitive Java types.
-PtrTypeMap g_map_type_wrapper(nullptr);
+PtrPrimitiveMap g_map_primitive_wrapper(nullptr);
+
+// The global map to cache the frequently used method ids.
+PtrClassMap g_map_class_cache(nullptr);
 
 
 void InstrumentGadgetComposer::Compose()
@@ -95,151 +98,225 @@ bool InstrumentGadgetComposer::RegisterInstrumentGadget()
     return PROC_SUCC;
 }
 
+MethodBundleNative::~MethodBundleNative()
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+    env->DeleteGlobalRef(bundle_);
+}
+
+PrimitiveTypeWrapper::~PrimitiveTypeWrapper()
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+    env->DeleteGlobalRef(clazz_);
+}
+
 bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 {
-    // Initialize the global map for primitive type wrapper maintenance.
-    typedef std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>
-            TypeMap;
-    TypeMap* type_map = new(std::nothrow)TypeMap();
-    if (!type_map)
-        return PROC_FAIL;
-    g_map_type_wrapper.reset(type_map);
-
     // Load Boolean wrapper.
     char sig[kBlahSizeMid];
-    jclass clazz = env->FindClass(kSigBooleanObject);
-    CHK_EXCP(env);
+    jclass clazz = env->FindClass(kNormBooleanObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigBoolean, kSigVoid);
     jmethodID meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigBoolean);
     jmethodID meth_access = env->GetMethodID(clazz, kFuncBooleanValue, sig);
-    CHK_EXCP(env);
 
+    jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    jclass g_clazz = reinterpret_cast<jclass>(g_ref);
     PrimitiveTypeWrapper* wrapper = new(std::nothrow) PrimitiveTypeWrapper(
-                                                clazz, meth_ctor, meth_access);
+                                        g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeBoolean,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeBoolean,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
     // Load Byte Wrapper.
-    clazz = env->FindClass(kSigByteObject);
-    CHK_EXCP(env);
+    clazz = env->FindClass(kNormByteObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigByte, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigByte);
     meth_access = env->GetMethodID(clazz, kFuncByteValue, sig);
-    CHK_EXCP(env);
 
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(clazz, meth_ctor, meth_access);
+    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    g_clazz = reinterpret_cast<jclass>(g_ref);
+    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeByte,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeByte,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
     // Load Character Wrapper.
-    clazz = env->FindClass(kSigCharObject);
-    CHK_EXCP(env);
+    clazz = env->FindClass(kNormCharObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigChar, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigChar);
     meth_access = env->GetMethodID(clazz, kFuncCharValue, sig);
-    CHK_EXCP(env);
 
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(clazz, meth_ctor, meth_access);
+    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    g_clazz = reinterpret_cast<jclass>(g_ref);
+    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeChar,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeChar,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
     // Load Short Wrapper.
-    clazz = env->FindClass(kSigShortObject);
-    CHK_EXCP(env);
+    clazz = env->FindClass(kNormShortObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigShort, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigShort);
     meth_access = env->GetMethodID(clazz, kFuncShortValue, sig);
-    CHK_EXCP(env);
 
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(clazz, meth_ctor, meth_access);
+    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    g_clazz = reinterpret_cast<jclass>(g_ref);
+    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeShort,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeShort,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
     // Load Integer Wrapper.
-    clazz = env->FindClass(kSigIntObject);
-    CHK_EXCP(env);
+    clazz = env->FindClass(kNormIntObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigInt, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigInt);
     meth_access = env->GetMethodID(clazz, kFuncIntValue, sig);
-    CHK_EXCP(env);
 
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(clazz, meth_ctor, meth_access);
+    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    g_clazz = reinterpret_cast<jclass>(g_ref);
+    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeInt,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeInt,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
     // Load Float Wrapper.
-    clazz = env->FindClass(kSigFloatObject);
-    CHK_EXCP(env);
+    clazz = env->FindClass(kNormFloatObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigFloat, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigFloat);
     meth_access = env->GetMethodID(clazz, kFuncFloatValue, sig);
-    CHK_EXCP(env);
 
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(clazz, meth_ctor, meth_access);
+    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    g_clazz = reinterpret_cast<jclass>(g_ref);
+    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeFloat,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeFloat,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
     // Load Long Wrapper.
-    clazz = env->FindClass(kSigLongObject);
-    CHK_EXCP(env);
+    clazz = env->FindClass(kNormLongObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigLong, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigLong);
     meth_access = env->GetMethodID(clazz, kFuncLongValue, sig);
-    CHK_EXCP(env);
 
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(clazz, meth_ctor, meth_access);
+    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    g_clazz = reinterpret_cast<jclass>(g_ref);
+    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeLong,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeLong,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
     // Load Double Wrapper.
-    clazz = env->FindClass(kSigDoubleObject);
-    CHK_EXCP(env);
+    clazz = env->FindClass(kNormDoubleObject);
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigDouble, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP(env);
     snprintf(sig, kBlahSizeMid, "()%c", kSigDouble);
     meth_access = env->GetMethodID(clazz, kFuncDoubleValue, sig);
-    CHK_EXCP(env);
 
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(clazz, meth_ctor, meth_access);
+    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    g_clazz = reinterpret_cast<jclass>(g_ref);
+    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     // TODO: Out of memory check and message logging.
     if (!wrapper)
         return PROC_FAIL;
-    g_map_type_wrapper->insert(std::make_pair(kTypeDouble,
+    g_map_primitive_wrapper->insert(std::make_pair(kTypeDouble,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
+
+    return PROC_SUCC;
+}
+
+ClassCache::~ClassCache()
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+    env->DeleteGlobalRef(clazz_);
+}
+
+bool ClassCache::LoadClasses(JNIEnv* env)
+{
+    char sig[kBlahSizeMid];
+    // Load "java.lang.Object".
+    {
+        jclass clazz = env->FindClass(kNormObject);
+        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
+        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
+        if (!class_cache.get())
+            return PROC_FAIL;
+
+        // Load "String Object.toString()".
+        {
+            snprintf(sig, kBlahSizeMid, "()%s", kSigString);
+            jmethodID meth = env->GetMethodID(clazz, kFuncToString, sig);
+            snprintf(sig, kBlahSizeMid, "%s()%s", kFuncToString, kSigString);
+            std::string sig_method(sig);
+            class_cache->CacheMethod(sig_method, meth);
+        }
+        std::string sig_class(kNormObject);
+        g_map_class_cache->insert(std::make_pair(sig_class,
+                            std::unique_ptr<ClassCache>(class_cache.release())));
+    }
+
+    // Load "java.lang.IllegalArgumentException".
+    {
+        jclass clazz = env->FindClass(kNormIllegalArgument);
+        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
+        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
+        if (!class_cache.get())
+            return PROC_FAIL;
+        std::string sig_class(kNormIllegalArgument);
+        g_map_class_cache->insert(std::make_pair(sig_class,
+                            std::unique_ptr<ClassCache>(class_cache.release())));
+    }
+
+    // Load "java.lang.CLassNotFoundException".
+    {
+        jclass clazz = env->FindClass(kNormClassNotFound);
+        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
+        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
+        if (!class_cache.get())
+            return PROC_FAIL;
+        std::string sig_class(kNormClassNotFound);
+        g_map_class_cache->insert(std::make_pair(sig_class,
+                            std::unique_ptr<ClassCache>(class_cache.release())));
+    }
+
+    // Load "java.lang.NoSuchMethodException".
+    {
+        jclass clazz = env->FindClass(kNormNoSuchMethod);
+        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
+        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
+        if (!class_cache.get())
+            return PROC_FAIL;
+        std::string sig_class(kNormNoSuchMethod);
+        g_map_class_cache->insert(std::make_pair(sig_class,
+                            std::unique_ptr<ClassCache>(class_cache.release())));
+    }
+
+    return PROC_SUCC;
 }
