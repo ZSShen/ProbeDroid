@@ -44,6 +44,7 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     // Let "loadClass()" finish its original task. The "android.app.Application"
     // will be returned.
     jobject ref_clazz = env->CallObjectMethod(ref_obj, meth_id, ref_arg_first);
+    CHK_EXCP(env, exit(EXIT_FAILURE));
 
     // Use the reference key to resolve the actual object.
     void* clazz = DecodeJObject(thread, ref_clazz);
@@ -53,7 +54,7 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     RemoveIndirectReference(ref_table, cookie, ref_arg_first);
     RemoveIndirectReference(ref_table, cookie, ref_clazz);
 
-    //LOGD("Success");
+    CAT(INFO) << StringPrintf("Gadget deployment success.");
     return clazz;
 }
 
@@ -84,16 +85,20 @@ void ArtQuickInstrument(void **ret_type, void **ret_val, void *receiver, void *m
         ref_input_type, receiver, reg_first, reg_second, stk_ptr + kStackAlignment);
 
     input_marshaller.Flatten();
-    // TODO: Should check for boxing error and handle the exception.
-    input_marshaller.BoxInputs();
+    if(input_marshaller.BoxInputs() != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Box the input for instrument callback"
+            " before %s.%s%s", bundle_native->GetClassName().c_str(),
+           bundle_native->GetMethodName().c_str(),
+           bundle_native->GetMethodSignature().c_str());
 
     // Launch the callback to instrument input arguments.
     jobject bundle_java = bundle_native->GetBundleObject();
     jmethodID meth_before_exec = bundle_native->GetBeforeExecuteCallback();
     jobjectArray boxed_input = input_marshaller.GetBoxedInputs();
-    // TODO: Handle the invocation exception.
     env->CallVoidMethod(bundle_java, meth_before_exec, boxed_input);
-    //LOGD("Test OK");
+    CHK_EXCP_AND_RET(env, exit(EXIT_FAILURE));
+
+    CAT(INFO) << StringPrintf("Test OK");
 }
 
 void InputMarshaller::Flatten()
@@ -133,7 +138,6 @@ bool InputMarshaller::BoxInputs()
     auto iter = g_map_class_cache->find(sig_class);
     jclass clazz = iter->second->GetClass();
     boxed_inputs_ = env_->NewObjectArray(count_input_, clazz, nullptr);
-    CHK_EXCP(env_);
 
     // Helpers for resource clean when JNI exception occurs.
     std::vector<jobject> prim;
@@ -162,7 +166,7 @@ bool InputMarshaller::BoxInputs()
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jboolean real = static_cast<jboolean>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 break;
             }
@@ -170,7 +174,7 @@ bool InputMarshaller::BoxInputs()
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jbyte real = static_cast<jbyte>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 break;
             }
@@ -178,7 +182,7 @@ bool InputMarshaller::BoxInputs()
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jchar real = static_cast<jchar>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 break;
             }
@@ -186,7 +190,7 @@ bool InputMarshaller::BoxInputs()
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jshort real = static_cast<jshort>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 break;
             }
@@ -194,7 +198,7 @@ bool InputMarshaller::BoxInputs()
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jint real = static_cast<jint>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 break;
             }
@@ -202,7 +206,7 @@ bool InputMarshaller::BoxInputs()
                 jfloat* deref = reinterpret_cast<jfloat*>(scan++);
                 jfloat real = *deref;
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 break;
             }
@@ -210,7 +214,7 @@ bool InputMarshaller::BoxInputs()
                 jlong* deref = reinterpret_cast<jlong*>(scan);
                 jlong real = *deref;
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 scan += kWidthQword;
                 break;
@@ -219,7 +223,7 @@ bool InputMarshaller::BoxInputs()
                 jdouble* deref = reinterpret_cast<jdouble*>(scan);
                 jdouble real = *deref;
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP(env_, CLEAN_LOCAL(prim, nonprim));
+                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
                 prim.push_back(obj);
                 scan += kWidthQword;
                 break;

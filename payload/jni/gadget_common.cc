@@ -44,21 +44,20 @@ PtrClassMap g_map_class_cache(nullptr);
 void InstrumentGadgetComposer::Compose()
 {
     if (LinkWithAnalysisAPK() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Link instrument APK.");
 
     // Initialize the global map for method information maintenance.
     typedef std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>
             BundleMap;
     BundleMap* bundle_map = new(std::nothrow)BundleMap();
     if (!bundle_map)
-        return;
+        CAT(FATAL) << StringPrintf("Allocate map for MethodBundleNative.");
     g_map_method_bundle.reset(bundle_map);
 
     // Invoke the overrode "void Instrument.onApplicationStart()" to let the
     // analysis APK register the methods which it intends to instrument.
     if (RegisterInstrumentGadget() != PROC_SUCC)
-        return;
-
+        CAT(FATAL) << StringPrintf("Call Instrument.onApplicationStart().");
     return;
 }
 
@@ -69,15 +68,14 @@ bool InstrumentGadgetComposer::LinkWithAnalysisAPK()
     snprintf(sig, kBlahSizeMid, "(%s)%c", kSigString, kSigVoid);
     jmethodID meth = env_->GetMethodID(g_class_analysis_main,
                                        kFuncPrepareNativeBridge, sig);
-    CHK_EXCP(env_);
+    CHK_EXCP_AND_RET_FAIL(env_);
 
     // Convert the library pathname to UTF format.
     jstring path_module = env_->NewStringUTF(g_lib_path);
-    CHK_EXCP(env_);
 
     // Invoke it to let the analysis APK link with this native library.
     env_->CallVoidMethod(g_obj_analysis_main, meth, path_module);
-    CHK_EXCP(env_);
+    CHK_EXCP_AND_RET_FAIL(env_);
 
     env_->DeleteLocalRef(path_module);
     return PROC_SUCC;
@@ -90,11 +88,11 @@ bool InstrumentGadgetComposer::RegisterInstrumentGadget()
     snprintf(sig, kBlahSizeMid, "()%c", kSigVoid);
     jmethodID meth = env_->GetMethodID(g_class_analysis_main,
                                        kFuncOnApplicationStart, sig);
-    CHK_EXCP(env_);
+    CHK_EXCP_AND_RET_FAIL(env_);
 
     // Invoke it to let the analysis APK deploy the instrument gadget.
     env_->CallVoidMethod(g_obj_analysis_main, meth);
-    CHK_EXCP(env_);
+    CHK_EXCP_AND_RET_FAIL(env_);
 
     return PROC_SUCC;
 }

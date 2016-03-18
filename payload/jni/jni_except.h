@@ -5,8 +5,8 @@
 #include <jni.h>
 
 
-void LogException(JNIEnv*, jthrowable, const char*, const int);
-void ThrowException(JNIEnv*, const char*, jthrowable, const char*, const int);
+void LogException(JNIEnv*, jthrowable);
+void ThrowException(JNIEnv*, const char*);
 
 static const char* kRecursiveExcept = "Exception occurs during exception message processing.";
 
@@ -16,33 +16,41 @@ static const char* kRecursiveExcept = "Exception occurs during exception message
             jthrowable except;                                                 \
             if ((except = env->ExceptionOccurred())) {                         \
                 env->ExceptionClear();                                         \
-                LogException(env, except, __FILE__, __LINE__);                 \
-                __VA_ARGS__ ;                                                  \
+                LogException(env, except);                                     \
+                __VA_ARGS__;                                                   \
+            }                                                                  \
+        } while (0);
+
+#define CHK_EXCP_AND_RET(env, ...)                                             \
+        do {                                                                   \
+            jthrowable except;                                                 \
+            if ((except = env->ExceptionOccurred())) {                         \
+                env->ExceptionClear();                                         \
+                LogException(env, except);                                     \
+                __VA_ARGS__;                                                   \
+                return;                                                        \
+            }                                                                  \
+        } while (0);
+
+#define CHK_EXCP_AND_RET_FAIL(env, ...)                                        \
+        do {                                                                   \
+            jthrowable except;                                                 \
+            if ((except = env->ExceptionOccurred())) {                         \
+                env->ExceptionClear();                                         \
+                LogException(env, except);                                     \
+                __VA_ARGS__;                                                   \
                 return PROC_FAIL;                                              \
             }                                                                  \
         } while (0);
 
-#define CHK_EXCP_AND_DETACH(jvm, env, ...)                                     \
+#define DETACH(jvm)                                                            \
         do {                                                                   \
-            jthrowable except;                                                 \
-            if ((except = env->ExceptionOccurred())) {                         \
-                env->ExceptionClear();                                         \
-                LogException(env, except, __FILE__, __LINE__);                 \
-                __VA_ARGS__;                                                   \
-                jvm->DetachCurrentThread();                                    \
-                return PROC_FAIL;                                              \
-            }                                                                  \
-        } while (0);                                                           \
+            jvm->DetachCurrentThread();                                        \
+        } while (0);
 
-#define CHK_EXCP_AND_RETHROW(jvm, env, type, ...)                              \
+#define RETHROW(type)                                                          \
         do {                                                                   \
-            jthrowable except;                                                 \
-            if ((except = env->ExceptionOccurred())) {                         \
-                env->ExceptionClear();                                         \
-                ThrowException(env, type, except, __FILE__, __LINE__);         \
-                __VA_ARGS__;                                                   \
-                return;                                                        \
-            }                                                                  \
+            ThrowException(env, except, type);                                 \
         } while (0);
 
 #endif

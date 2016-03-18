@@ -102,6 +102,21 @@ class MethodBundleNative
         return quick_code_entry_origin_;
     }
 
+    const std::string& GetClassName()
+    {
+        return name_class_;
+    }
+
+    const std::string& GetMethodName()
+    {
+        return name_method_;
+    }
+
+    const std::string& GetMethodSignature()
+    {
+        return signature_method_;
+    }
+
   private:
     bool is_static_;
     char type_output_;

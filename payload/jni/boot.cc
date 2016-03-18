@@ -172,7 +172,7 @@ bool Bootstrap::LoadAnalysisModule()
 
     // Get the system "java.lang.ClassLoader".
     jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
+    CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
 
     // Convert the pathname strings to UTF format.
     jstring path_module = env->NewStringUTF(g_module_path);
@@ -188,7 +188,7 @@ bool Bootstrap::LoadAnalysisModule()
     // Load the optimized dex file of the analysis APK.
     jobject dexfile = env->CallStaticObjectMethod(clazz_dexfile, meth, path_module,
                                                    path_cache, 0);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
+    CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
 
     // Resolve "Enumeration<String> DexFile.entries()".
     snprintf(sig, kBlahSizeMid, "()%s", kSigEnumeration);
@@ -196,7 +196,7 @@ bool Bootstrap::LoadAnalysisModule()
 
     // Get the list of classes defined in the analysis APK.
     jobject enums = env->CallObjectMethod(dexfile, meth);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
+    CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
     jclass clazz_enums = env->GetObjectClass(enums);
 
     // Resolve "boolean Enumeration<String>.hasMoreElements()".
@@ -214,18 +214,18 @@ bool Bootstrap::LoadAnalysisModule()
     while (true) {
         // Try to load all the classes defined in the analysis APK.
         jboolean has_next = env->CallBooleanMethod(enums, meth_has_more);
-        CHK_EXCP_AND_DETACH(g_jvm, env);
+        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
         if (has_next == JNI_FALSE)
             break;
 
         jobject entry = env->CallObjectMethod(enums, meth_next);
-        CHK_EXCP_AND_DETACH(g_jvm, env);
+        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
         jstring str_class = reinterpret_cast<jstring>(entry);
         jboolean is_copy = JNI_FALSE;
         const char *cstr_class = env->GetStringUTFChars(str_class, &is_copy);
 
         jobject clazz = env->CallObjectMethod(dexfile, meth, entry, class_loader);
-        CHK_EXCP_AND_DETACH(g_jvm, env);
+        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
         if (strcmp(cstr_class, g_class_name) != 0)
             continue;
 
@@ -236,7 +236,7 @@ bool Bootstrap::LoadAnalysisModule()
         jclass clazz_main = reinterpret_cast<jclass>(clazz);
         snprintf(sig, kBlahSizeMid, "()%c", kSigVoid);
         jmethodID meth_ctor = env->GetMethodID(clazz_main, kFuncConstructor, sig);
-        CHK_EXCP_AND_DETACH(g_jvm, env);
+        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
 
         jobject main = env->NewObject(clazz_main, meth_ctor);
         g_obj_analysis_main = env->NewGlobalRef(main);
