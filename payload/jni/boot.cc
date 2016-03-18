@@ -167,79 +167,100 @@ bool Bootstrap::LoadAnalysisModule()
     char sig[kBlahSizeMid];
     // Resolve "static ClassLoader ClassLoader.getSystemClassLoader()".
     jclass clazz = env->FindClass(kNormClassLoader);
+    CHK_EXCP_AND_RET_FAIL(env);
     snprintf(sig, kBlahSizeMid, "()%s", kSigClassLoader);
     jmethodID meth = env->GetStaticMethodID(clazz, kFuncGetSystemClassLoader, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Get the system "java.lang.ClassLoader".
     jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
-    CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Convert the pathname strings to UTF format.
     jstring path_module = env->NewStringUTF(g_module_path);
+    CHK_EXCP_AND_RET_FAIL(env);
     snprintf(sig, kBlahSizeMid, "%s/%s", dex_path_.get(), kDexFileTemp);
     jstring path_cache = env->NewStringUTF(sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Resolve "static DexFile DexFile.loadDex(String, String, int)".
     jclass clazz_dexfile = env->FindClass(kNormDexFile);
     snprintf(sig, kBlahSizeMid, "(%s%s%c)%s", kSigString, kSigString, kSigInt,
                                               kSigDexFile);
+    CHK_EXCP_AND_RET_FAIL(env);
     meth = env->GetStaticMethodID(clazz_dexfile, kFuncLoadDex, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Load the optimized dex file of the analysis APK.
     jobject dexfile = env->CallStaticObjectMethod(clazz_dexfile, meth, path_module,
                                                    path_cache, 0);
-    CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Resolve "Enumeration<String> DexFile.entries()".
     snprintf(sig, kBlahSizeMid, "()%s", kSigEnumeration);
     meth = env->GetMethodID(clazz_dexfile, kFuncEntries, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Get the list of classes defined in the analysis APK.
     jobject enums = env->CallObjectMethod(dexfile, meth);
-    CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
+    CHK_EXCP_AND_RET_FAIL(env);
     jclass clazz_enums = env->GetObjectClass(enums);
 
     // Resolve "boolean Enumeration<String>.hasMoreElements()".
     snprintf(sig, kBlahSizeMid, "()%c", kSigBoolean);
     jmethodID meth_has_more = env->GetMethodID(clazz_enums, kFuncHasMoreElements, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Resolve "String Enumeration<String>.nextElement()".
     snprintf(sig, kBlahSizeMid, "()%s", kSigString);
     jmethodID meth_next = env->GetMethodID(clazz_enums, kFuncNextElement, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Resolve "Class DexFile.loadClass(String, ClassLoader)".
     snprintf(sig, kBlahSizeMid, "(%s%s)%s", kSigString, kSigClassLoader, kSigClass);
     meth = env->GetMethodID(clazz_dexfile, kFuncLoadClass, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     while (true) {
         // Try to load all the classes defined in the analysis APK.
         jboolean has_next = env->CallBooleanMethod(enums, meth_has_more);
-        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
+        CHK_EXCP_AND_RET_FAIL(env);
         if (has_next == JNI_FALSE)
             break;
 
         jobject entry = env->CallObjectMethod(enums, meth_next);
-        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
+        CHK_EXCP_AND_RET_FAIL(env);
         jstring str_class = reinterpret_cast<jstring>(entry);
         jboolean is_copy = JNI_FALSE;
         const char *cstr_class = env->GetStringUTFChars(str_class, &is_copy);
 
         jobject clazz = env->CallObjectMethod(dexfile, meth, entry, class_loader);
-        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
+        CHK_EXCP_AND_RET_FAIL(env);
         if (strcmp(cstr_class, g_class_name) != 0)
             continue;
 
         // If the class name matches the main class of the analysis APK, cache
         // the class and instantiate an object for it.
         g_class_analysis_main = reinterpret_cast<jclass>(env->NewGlobalRef(clazz));
+        if (!g_class_analysis_main) {
+            CAT(ERROR) << StringPrintf("Allocate a global reference for the main "
+                                        "class of the instrument APK.");
+            return PROC_FAIL;
+        }
 
         jclass clazz_main = reinterpret_cast<jclass>(clazz);
         snprintf(sig, kBlahSizeMid, "()%c", kSigVoid);
         jmethodID meth_ctor = env->GetMethodID(clazz_main, kFuncConstructor, sig);
-        CHK_EXCP_AND_RET_FAIL(env, DETACH(g_jvm));
+        CHK_EXCP_AND_RET_FAIL(env);
 
         jobject main = env->NewObject(clazz_main, meth_ctor);
+        CHK_EXCP_AND_RET_FAIL(env);
         g_obj_analysis_main = env->NewGlobalRef(main);
+        if (!g_obj_analysis_main) {
+            CAT(ERROR) << StringPrintf("Allocate a global reference for the "
+                                        "instantiated main class.");
+            return PROC_FAIL;
+        }
     }
 
     env->DeleteLocalRef(path_module);
@@ -274,8 +295,10 @@ bool Bootstrap::DeployInstrumentGadgetComposer()
     jthrowable except;
     // Resolve "Class ClassLoader.loadClass(String)".
     jclass clazz = env->FindClass(kNormClassLoader);
+    CHK_EXCP_AND_RET_FAIL(env);
     snprintf(sig, kBlahSizeMid, "(%s)%s", kSigString, kSigClass);
     jmethodID meth = env->GetMethodID(clazz, kFuncLoadClass, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     // Change the entry point to the quick-compiled code of "loadClass()" to the
     // trampoline of the instrument gadget composer. So when the first component

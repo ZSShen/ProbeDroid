@@ -26,6 +26,10 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     const char* cstr_class_name = env->GetStringUTFChars(name_class, &is_copy);
     const char* cstr_method_name = env->GetStringUTFChars(name_method, &is_copy);
     const char* cstr_method_sig = env->GetStringUTFChars(signature_method, &is_copy);
+    if (!cstr_class_name || !cstr_method_name || !cstr_method_sig) {
+        jthrowable except;
+        RETHROW(kNormIllegalArgument);
+    }
 
     // Normalize the class name.
     char sig[kBlahSizeMid];
@@ -85,7 +89,9 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     char type_output = parser.GetOutputType();
 
     jobject g_bundle = env->NewGlobalRef(bundle);
-    CHK_EXCP_AND_RET(env);
+    if (!g_bundle)
+        CAT(FATAL) << StringPrintf("Allocate global reference for a MethodBundle.");
+
     MethodBundleNative* bundle_native = new(std::nothrow) MethodBundleNative(
         is_static, cstr_class_name, cstr_method_name, cstr_method_sig,
         type_inputs, type_output, entry_origin, g_bundle, meth_before, meth_after);

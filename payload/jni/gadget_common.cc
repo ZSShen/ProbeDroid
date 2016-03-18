@@ -72,6 +72,7 @@ bool InstrumentGadgetComposer::LinkWithAnalysisAPK()
 
     // Convert the library pathname to UTF format.
     jstring path_module = env_->NewStringUTF(g_lib_path);
+    CHK_EXCP_AND_RET_FAIL(env_);
 
     // Invoke it to let the analysis APK link with this native library.
     env_->CallVoidMethod(g_obj_analysis_main, meth, path_module);
@@ -116,12 +117,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     // Load Boolean wrapper.
     char sig[kBlahSizeMid];
     jclass clazz = env->FindClass(kNormBooleanObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigBoolean, kSigVoid);
     jmethodID meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigBoolean);
     jmethodID meth_access = env->GetMethodID(clazz, kFuncBooleanValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Boolean class.");
+        return PROC_FAIL;
+    }
     jclass g_clazz = reinterpret_cast<jclass>(g_ref);
     PrimitiveTypeWrapper* wrapper = new(std::nothrow) PrimitiveTypeWrapper(
                                         g_clazz, meth_ctor, meth_access);
@@ -134,12 +144,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 
     // Load Byte Wrapper.
     clazz = env->FindClass(kNormByteObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigByte, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigByte);
     meth_access = env->GetMethodID(clazz, kFuncByteValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Byte class.");
+        return PROC_FAIL;
+    }
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     if (!wrapper) {
@@ -151,12 +170,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 
     // Load Character Wrapper.
     clazz = env->FindClass(kNormCharObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigChar, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigChar);
     meth_access = env->GetMethodID(clazz, kFuncCharValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Character class.");
+        return PROC_FAIL;
+    }
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     if (!wrapper) {
@@ -168,12 +196,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 
     // Load Short Wrapper.
     clazz = env->FindClass(kNormShortObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigShort, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigShort);
     meth_access = env->GetMethodID(clazz, kFuncShortValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Short class.");
+        return PROC_FAIL;
+    }
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     if (!wrapper) {
@@ -185,12 +222,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 
     // Load Integer Wrapper.
     clazz = env->FindClass(kNormIntObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigInt, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigInt);
     meth_access = env->GetMethodID(clazz, kFuncIntValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Integer class.");
+        return PROC_FAIL;
+    }
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     if (!wrapper) {
@@ -202,12 +248,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 
     // Load Float Wrapper.
     clazz = env->FindClass(kNormFloatObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigFloat, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigFloat);
     meth_access = env->GetMethodID(clazz, kFuncFloatValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Float class.");
+        return PROC_FAIL;
+    }
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     if (!wrapper) {
@@ -219,12 +274,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 
     // Load Long Wrapper.
     clazz = env->FindClass(kNormLongObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigLong, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigLong);
     meth_access = env->GetMethodID(clazz, kFuncLongValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Long class.");
+        return PROC_FAIL;
+    }
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     if (!wrapper) {
@@ -236,12 +300,21 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
 
     // Load Double Wrapper.
     clazz = env->FindClass(kNormDoubleObject);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "(%c)%c", kSigDouble, kSigVoid);
     meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     snprintf(sig, kBlahSizeMid, "()%c", kSigDouble);
     meth_access = env->GetMethodID(clazz, kFuncDoubleValue, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
 
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref) {
+        CAT(ERROR) << StringPrintf("Allocate a global reference for Double class.");
+        return PROC_FAIL;
+    }
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
     if (!wrapper) {
@@ -267,7 +340,14 @@ bool ClassCache::LoadClasses(JNIEnv* env)
     // Load "java.lang.Object".
     {
         jclass clazz = env->FindClass(kNormObject);
+        CHK_EXCP_AND_RET_FAIL(env);
+
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        if (!g_ref) {
+            CAT(ERROR) << StringPrintf("Allocate a global reference for Object class.");
+            return PROC_FAIL;
+        }
+
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
         ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
         if (!class_cache) {
@@ -279,6 +359,8 @@ bool ClassCache::LoadClasses(JNIEnv* env)
         {
             snprintf(sig, kBlahSizeMid, "()%s", kSigString);
             jmethodID meth = env->GetMethodID(clazz, kFuncToString, sig);
+            CHK_EXCP_AND_RET_FAIL(env);
+
             snprintf(sig, kBlahSizeMid, "%s()%s", kFuncToString, kSigString);
             std::string sig_method(sig);
             class_cache->CacheMethod(sig_method, meth);
@@ -291,7 +373,15 @@ bool ClassCache::LoadClasses(JNIEnv* env)
     // Load "java.lang.IllegalArgumentException".
     {
         jclass clazz = env->FindClass(kNormIllegalArgument);
+        CHK_EXCP_AND_RET_FAIL(env);
+
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        if (!g_ref) {
+            CAT(ERROR) << StringPrintf("Allocate a global reference for "
+                                        "IllegalArgumentException class.");
+            return PROC_FAIL;
+        }
+
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
         ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
         if (!class_cache) {
@@ -306,7 +396,15 @@ bool ClassCache::LoadClasses(JNIEnv* env)
     // Load "java.lang.ClassNotFoundException".
     {
         jclass clazz = env->FindClass(kNormClassNotFound);
+        CHK_EXCP_AND_RET_FAIL(env);
+
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        if (!g_ref) {
+            CAT(ERROR) << StringPrintf("Allocate a global reference for "
+                                        "ClassNotFoundException class.");
+            return PROC_FAIL;
+        }
+
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
         ClassCache* class_cache = new(std::nothrow)ClassCache(g_clazz);
         if (!class_cache) {
@@ -321,7 +419,15 @@ bool ClassCache::LoadClasses(JNIEnv* env)
     // Load "java.lang.NoSuchMethodException".
     {
         jclass clazz = env->FindClass(kNormNoSuchMethod);
+        CHK_EXCP_AND_RET_FAIL(env);
+
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+        if (!g_ref) {
+            CAT(ERROR) << StringPrintf("Allocate a global reference for "
+                                        "NoSuchMethodException class.");
+            return PROC_FAIL;
+        }
+
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
         ClassCache* class_cache = new(std::nothrow)ClassCache(g_clazz);
         if (!class_cache) {

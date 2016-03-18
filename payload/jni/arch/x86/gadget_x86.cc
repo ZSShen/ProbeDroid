@@ -96,7 +96,7 @@ void ArtQuickInstrument(void **ret_type, void **ret_val, void *receiver, void *m
     jmethodID meth_before_exec = bundle_native->GetBeforeExecuteCallback();
     jobjectArray boxed_input = input_marshaller.GetBoxedInputs();
     env->CallVoidMethod(bundle_java, meth_before_exec, boxed_input);
-    CHK_EXCP_AND_RET(env, exit(EXIT_FAILURE));
+    CHK_EXCP(env, exit(EXIT_FAILURE));
 
     CAT(INFO) << StringPrintf("Test OK");
 }
@@ -138,10 +138,7 @@ bool InputMarshaller::BoxInputs()
     auto iter = g_map_class_cache->find(sig_class);
     jclass clazz = iter->second->GetClass();
     boxed_inputs_ = env_->NewObjectArray(count_input_, clazz, nullptr);
-
-    // Helpers for resource clean when JNI exception occurs.
-    std::vector<jobject> prim;
-    std::vector<jobject> nonprim;
+    CHK_EXCP_AND_RET_FAIL(env_);
 
     // Scanning pointer for boxing process.
     void** scan = unboxed_inputs_.get();
@@ -166,56 +163,49 @@ bool InputMarshaller::BoxInputs()
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jboolean real = static_cast<jboolean>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 break;
             }
             case kTypeByte: {
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jbyte real = static_cast<jbyte>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 break;
             }
             case kTypeChar: {
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jchar real = static_cast<jchar>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 break;
             }
             case kTypeShort: {
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jshort real = static_cast<jshort>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 break;
             }
             case kTypeInt: {
                 uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
                 jint real = static_cast<jint>(inter);
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 break;
             }
             case kTypeFloat: {
                 jfloat* deref = reinterpret_cast<jfloat*>(scan++);
                 jfloat real = *deref;
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 break;
             }
             case kTypeLong: {
                 jlong* deref = reinterpret_cast<jlong*>(scan);
                 jlong real = *deref;
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 scan += kWidthQword;
                 break;
             }
@@ -223,15 +213,13 @@ bool InputMarshaller::BoxInputs()
                 jdouble* deref = reinterpret_cast<jdouble*>(scan);
                 jdouble real = *deref;
                 obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_, CLEAN_LOCAL(prim, nonprim));
-                prim.push_back(obj);
+                CHK_EXCP_AND_RET_FAIL(env_);
                 scan += kWidthQword;
                 break;
             }
             case kTypeObject: {
                 void* ptr_obj = *scan++;
                 obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
-                nonprim.push_back(obj);
                 break;
             }
         }
