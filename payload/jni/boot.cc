@@ -8,9 +8,10 @@
 #include <future>
 #include <unistd.h>
 
-#include "globals.h"
-#include "logcat.h"
 #include "boot.h"
+#include "globals.h"
+#include "stringprintf.h"
+#include "logcat.h"
 #include "gadget.h"
 #include "signature.h"
 #include "mirror/art_method-inl.h"
@@ -138,15 +139,19 @@ bool Bootstrap::CacheHotJavaTypes()
     typedef std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>
             PrimitiveMap;
     PrimitiveMap* primitive_map = new(std::nothrow)PrimitiveMap();
-    if (!primitive_map)
+    if (!primitive_map) {
+        CAT(ERROR) << StringPrintf("Allocate global map for PrimitiveTypeWrapper.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper.reset(primitive_map);
 
     typedef std::unordered_map<std::string, std::unique_ptr<ClassCache>>
             ClassMap;
     ClassMap* class_map = new(std::nothrow)ClassMap();
-    if (!class_map)
+    if (!class_map) {
+        CAT(ERROR) << StringPrintf("Allocate global map for ClassCache.");
         return PROC_FAIL;
+    }
     g_map_class_cache.reset(class_map);
 
     if (PrimitiveTypeWrapper::LoadWrappers(env) != PROC_SUCC)
@@ -162,10 +167,8 @@ bool Bootstrap::LoadAnalysisModule()
     char sig[kBlahSizeMid];
     // Resolve "static ClassLoader ClassLoader.getSystemClassLoader()".
     jclass clazz = env->FindClass(kNormClassLoader);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
     snprintf(sig, kBlahSizeMid, "()%s", kSigClassLoader);
     jmethodID meth = env->GetStaticMethodID(clazz, kFuncGetSystemClassLoader, sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Get the system "java.lang.ClassLoader".
     jobject class_loader = env->CallStaticObjectMethod(clazz, meth);
@@ -173,18 +176,14 @@ bool Bootstrap::LoadAnalysisModule()
 
     // Convert the pathname strings to UTF format.
     jstring path_module = env->NewStringUTF(g_module_path);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
     snprintf(sig, kBlahSizeMid, "%s/%s", dex_path_.get(), kDexFileTemp);
     jstring path_cache = env->NewStringUTF(sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Resolve "static DexFile DexFile.loadDex(String, String, int)".
     jclass clazz_dexfile = env->FindClass(kNormDexFile);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
     snprintf(sig, kBlahSizeMid, "(%s%s%c)%s", kSigString, kSigString, kSigInt,
                                               kSigDexFile);
     meth = env->GetStaticMethodID(clazz_dexfile, kFuncLoadDex, sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Load the optimized dex file of the analysis APK.
     jobject dexfile = env->CallStaticObjectMethod(clazz_dexfile, meth, path_module,
@@ -194,28 +193,23 @@ bool Bootstrap::LoadAnalysisModule()
     // Resolve "Enumeration<String> DexFile.entries()".
     snprintf(sig, kBlahSizeMid, "()%s", kSigEnumeration);
     meth = env->GetMethodID(clazz_dexfile, kFuncEntries, sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Get the list of classes defined in the analysis APK.
     jobject enums = env->CallObjectMethod(dexfile, meth);
     CHK_EXCP_AND_DETACH(g_jvm, env);
     jclass clazz_enums = env->GetObjectClass(enums);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Resolve "boolean Enumeration<String>.hasMoreElements()".
     snprintf(sig, kBlahSizeMid, "()%c", kSigBoolean);
     jmethodID meth_has_more = env->GetMethodID(clazz_enums, kFuncHasMoreElements, sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Resolve "String Enumeration<String>.nextElement()".
     snprintf(sig, kBlahSizeMid, "()%s", kSigString);
     jmethodID meth_next = env->GetMethodID(clazz_enums, kFuncNextElement, sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Resolve "Class DexFile.loadClass(String, ClassLoader)".
     snprintf(sig, kBlahSizeMid, "(%s%s)%s", kSigString, kSigClassLoader, kSigClass);
     meth = env->GetMethodID(clazz_dexfile, kFuncLoadClass, sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     while (true) {
         // Try to load all the classes defined in the analysis APK.
@@ -238,7 +232,6 @@ bool Bootstrap::LoadAnalysisModule()
         // If the class name matches the main class of the analysis APK, cache
         // the class and instantiate an object for it.
         g_class_analysis_main = reinterpret_cast<jclass>(env->NewGlobalRef(clazz));
-        CHK_EXCP_AND_DETACH(g_jvm, env);
 
         jclass clazz_main = reinterpret_cast<jclass>(clazz);
         snprintf(sig, kBlahSizeMid, "()%c", kSigVoid);
@@ -246,10 +239,7 @@ bool Bootstrap::LoadAnalysisModule()
         CHK_EXCP_AND_DETACH(g_jvm, env);
 
         jobject main = env->NewObject(clazz_main, meth_ctor);
-        CHK_EXCP_AND_DETACH(g_jvm, env);
-
         g_obj_analysis_main = env->NewGlobalRef(main);
-        CHK_EXCP_AND_DETACH(g_jvm, env);
     }
 
     env->DeleteLocalRef(path_module);
@@ -284,10 +274,8 @@ bool Bootstrap::DeployInstrumentGadgetComposer()
     jthrowable except;
     // Resolve "Class ClassLoader.loadClass(String)".
     jclass clazz = env->FindClass(kNormClassLoader);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
     snprintf(sig, kBlahSizeMid, "(%s)%s", kSigString, kSigClass);
     jmethodID meth = env->GetMethodID(clazz, kFuncLoadClass, sig);
-    CHK_EXCP_AND_DETACH(g_jvm, env);
 
     // Change the entry point to the quick-compiled code of "loadClass()" to the
     // trampoline of the instrument gadget composer. So when the first component
@@ -309,26 +297,27 @@ bool Bootstrap::DeployInstrumentGadgetComposer()
 
 void __attribute__((constructor)) HookEntry()
 {
-    LOGD("\n\nInstrumentation Bootstrapping, pid = %d\n\n", getpid());
+    CAT(INFO) << StringPrintf("Instrument Bootstrap, pid=%d\n", getpid());
 
     boot::Bootstrap bootstrap;
     // Generate the pathnames required by Android DexClassLoader to dynamically
-    // load our instrumentation module.
+    // load our instrument module.
     if (bootstrap.ResolveInjectorDeliveredSymbols() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Resolve module paths.");
 
     if (bootstrap.CraftDexPrivatePath() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Craft installation path for instrument APK.");
+
     if (bootstrap.CreateDexPrivateDir() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Create APK installation directory.");
 
     // Retrieve the JVM handle which is necessary for the JNI interaction later.
     if (bootstrap.CacheJVM() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Cache JVM handle.");
 
     // Cache the access information about some hot Java types.
     if (bootstrap.CacheHotJavaTypes() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Preload hot Java types.");
 
     // Load our instrumentation module.
     // To avoid the ANR, we create a worker thread to offload the task bound to
@@ -340,17 +329,17 @@ void __attribute__((constructor)) HookEntry()
     std::thread thread(std::move(task));
     thread.join();
     if (future.get() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Install and load instrument APK.");
 
     // Resolve the entry points of some critical libart functions which would be
     // used for native code resource management.
     if (bootstrap.ResolveArtSymbol() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Resolve libart symbols.");
 
     // Deploy the hooking gadget composer and finish the bootstrap process.
     // The control flow of the instrumented application will be diverted to
     // the composer when "Class ClassLoader.loadClass(String)" is about to be
     // called to load the first application component "android.app.Application".
     if (bootstrap.DeployInstrumentGadgetComposer() != PROC_SUCC)
-        return;
+        CAT(FATAL) << StringPrintf("Deploy instrument gadget composer.");
 }

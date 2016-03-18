@@ -17,6 +17,8 @@ LOCAL_SRC_FILES         :=  ../../common/libffi/src/debug.c \
                             ../../common/libffi/src/java_raw_api.c \
                             ../../common/libffi/src/x86/ffi.c \
                             ../../common/libffi/src/x86/sysv.S \
+                            ../../common/stringprintf.cc \
+                            ../../common/logcat.cc \
                             gadget_common.cc \
                             ./arch/x86/gadget-asm_x86.s \
                             ./arch/x86/gadget_x86.cc \

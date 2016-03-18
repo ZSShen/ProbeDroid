@@ -8,7 +8,7 @@
 #include "logcat.h"
 #include "ffi.h"
 #include "globals.h"
-#include "jni_except.h"
+#include "jni_except-inl.h"
 
 
 void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
@@ -53,7 +53,7 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     RemoveIndirectReference(ref_table, cookie, ref_arg_first);
     RemoveIndirectReference(ref_table, cookie, ref_clazz);
 
-    LOGD("Success");
+    //LOGD("Success");
     return clazz;
 }
 
@@ -93,7 +93,7 @@ void ArtQuickInstrument(void **ret_type, void **ret_val, void *receiver, void *m
     jobjectArray boxed_input = input_marshaller.GetBoxedInputs();
     // TODO: Handle the invocation exception.
     env->CallVoidMethod(bundle_java, meth_before_exec, boxed_input);
-    LOGD("Test OK");
+    //LOGD("Test OK");
 }
 
 void InputMarshaller::Flatten()

@@ -2,6 +2,7 @@
 
 #include "gadget.h"
 #include "jni_except-inl.h"
+#include "stringprintf.h"
 
 
 // The cached symbols delivered from injector.
@@ -126,9 +127,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     jclass g_clazz = reinterpret_cast<jclass>(g_ref);
     PrimitiveTypeWrapper* wrapper = new(std::nothrow) PrimitiveTypeWrapper(
                                         g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Boolean.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeBoolean,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -142,9 +144,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Byte.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeByte,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -158,9 +161,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Character.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeChar,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -174,9 +178,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Short.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeShort,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -190,9 +195,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Integer.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeInt,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -206,9 +212,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Float.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeFloat,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -222,9 +229,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Long.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeLong,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -238,9 +246,10 @@ bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
     g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
     g_clazz = reinterpret_cast<jclass>(g_ref);
     wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    // TODO: Out of memory check and message logging.
-    if (!wrapper)
+    if (!wrapper) {
+        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Double.");
         return PROC_FAIL;
+    }
     g_map_primitive_wrapper->insert(std::make_pair(kTypeDouble,
                                std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
 
@@ -262,9 +271,11 @@ bool ClassCache::LoadClasses(JNIEnv* env)
         jclass clazz = env->FindClass(kNormObject);
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
-        if (!class_cache.get())
+        ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
+        if (!class_cache) {
+            CAT(ERROR) << StringPrintf("Allocate ClassCache for Object.");
             return PROC_FAIL;
+        }
 
         // Load "String Object.toString()".
         {
@@ -276,7 +287,7 @@ bool ClassCache::LoadClasses(JNIEnv* env)
         }
         std::string sig_class(kNormObject);
         g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache.release())));
+                            std::unique_ptr<ClassCache>(class_cache)));
     }
 
     // Load "java.lang.IllegalArgumentException".
@@ -284,25 +295,29 @@ bool ClassCache::LoadClasses(JNIEnv* env)
         jclass clazz = env->FindClass(kNormIllegalArgument);
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
-        if (!class_cache.get())
+        ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
+        if (!class_cache) {
+            CAT(ERROR) << StringPrintf("Allocate ClassCache for IllegalArgumentException.");
             return PROC_FAIL;
+        }
         std::string sig_class(kNormIllegalArgument);
         g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache.release())));
+                            std::unique_ptr<ClassCache>(class_cache)));
     }
 
-    // Load "java.lang.CLassNotFoundException".
+    // Load "java.lang.ClassNotFoundException".
     {
         jclass clazz = env->FindClass(kNormClassNotFound);
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
-        if (!class_cache.get())
+        ClassCache* class_cache = new(std::nothrow)ClassCache(g_clazz);
+        if (!class_cache) {
+            CAT(ERROR) << StringPrintf("Allocate ClassCache for ClassNotFoundException.");
             return PROC_FAIL;
+        }
         std::string sig_class(kNormClassNotFound);
         g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache.release())));
+                            std::unique_ptr<ClassCache>(class_cache)));
     }
 
     // Load "java.lang.NoSuchMethodException".
@@ -310,12 +325,14 @@ bool ClassCache::LoadClasses(JNIEnv* env)
         jclass clazz = env->FindClass(kNormNoSuchMethod);
         jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        std::unique_ptr<ClassCache> class_cache(new(std::nothrow)ClassCache(g_clazz));
-        if (!class_cache.get())
+        ClassCache* class_cache = new(std::nothrow)ClassCache(g_clazz);
+        if (!class_cache) {
+            CAT(ERROR) << StringPrintf("Allocate ClassCache for NoSuchMethodException.");
             return PROC_FAIL;
+        }
         std::string sig_class(kNormNoSuchMethod);
         g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache.release())));
+                            std::unique_ptr<ClassCache>(class_cache)));
     }
 
     return PROC_SUCC;

@@ -2,10 +2,36 @@
 #define _LOGCAT_H_
 
 
-#include "android/log.h"
+#include "log.h"
+#include "macros.h"
 
 
-#define LOG_TAG "PAYLOAD"
-#define LOGD(fmt, args...) __android_log_print(ANDROID_LOG_DEBUG, LOG_TAG, fmt, ##args)
+#define CAT(severity) SpewCat(__FILE__, __LINE__, severity).stream()
+
+class SpewCat
+{
+  public:
+    SpewCat(const char* file, int line, LogSeverity severity)
+     : severity_(severity),
+       line_(line),
+       file_(file)
+    {}
+
+    ~SpewCat();
+
+    std::ostream& stream()
+    {
+        return buffer_;
+    }
+
+  private:
+    LogSeverity severity_;
+    int line_;
+    const char* file_;
+    std::ostringstream buffer_;
+
+    DISALLOW_COPY_AND_ASSIGN(SpewCat);
+};
+
 
 #endif
