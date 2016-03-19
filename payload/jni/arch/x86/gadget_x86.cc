@@ -107,24 +107,12 @@ void InputMarshaller::Flatten()
         return;
 
     off_t idx = 0;
-    int32_t rest;
-    if (receiver_) {
-        // Handle non-static methods.
-        if (unboxed_input_width_ >= 1)
-            unboxed_inputs_[idx++] = receiver_;
-        if (unboxed_input_width_ >= 2)
-            unboxed_inputs_[idx++] = reg_first_;
-        if (unboxed_input_width_ >= 3)
-            unboxed_inputs_[idx++] = reg_second_;
-        rest = unboxed_input_width_ - 3;
-    } else {
-        // Handle static methods.
-        if (unboxed_input_width_ >= 1)
-            unboxed_inputs_[idx++] = reg_first_;
-        if (unboxed_input_width_ >= 2)
-            unboxed_inputs_[idx++] = reg_second_;
-        rest = unboxed_input_width_ - 2;
-    }
+    if (unboxed_input_width_ >= 1)
+        unboxed_inputs_[idx++] = reg_first_;
+    if (unboxed_input_width_ >= 2)
+        unboxed_inputs_[idx++] = reg_second_;
+
+    int32_t rest = unboxed_input_width_ - 2;
     while (rest > 0) {
         unboxed_inputs_[idx++] = *stk_ptr_++;
         --rest;
@@ -142,8 +130,6 @@ bool InputMarshaller::BoxInputs()
 
     // Scanning pointer for boxing process.
     void** scan = unboxed_inputs_.get();
-    if (receiver_)
-        ++scan;
 
     // Box each argument by referencing its original data type.
     off_t idx = 0;
@@ -229,3 +215,5 @@ bool InputMarshaller::BoxInputs()
 
     return PROC_SUCC;
 }
+
+

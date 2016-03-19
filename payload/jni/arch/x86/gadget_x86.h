@@ -12,6 +12,7 @@
 
 
 static const constexpr int32_t kStackAlignment = 5 + 3 + 1;
+static const int32_t kMinJniArgCount = 3;
 
 
 // TODO: Need to redesign the constructor for exception safety later.
@@ -21,24 +22,21 @@ class InputMarshaller
     InputMarshaller(JNIEnv *env, int32_t count_input, int32_t unboxed_input_width,
                     const std::vector<char>& ref_input_type, void* receiver,
                     void* reg_first, void* reg_second, void** stk_ptr)
-     : count_input_(count_input),
-       unboxed_input_width_(unboxed_input_width),
-       receiver_(receiver),
-       reg_first_(reg_first),
-       reg_second_(reg_second),
-       stk_ptr_(stk_ptr),
-       env_(reinterpret_cast<JNIEnvExt*>(env)),
-       cookie_(env_->local_ref_cookie_),
-       ref_table_(reinterpret_cast<IndirectReferenceTable*>(&(env_->local_refs_table_))),
-       thread_(env_->thread_),
-       boxed_inputs_(nullptr),
-       ref_input_type_(ref_input_type),
-       unboxed_inputs_(((count_input > 0) || (receiver != nullptr))?
-                       new void*[unboxed_input_width] : nullptr),
-       gen_types_((count_input > 0)? new void*[count_input] :
-                  (receiver != nullptr)? new void*[1] : nullptr),
-       gen_values_((count_input > 0)? new void*[count_input] :
-                   (receiver != nullptr)? new void*[1] : nullptr)
+      : count_input_(count_input),
+        unboxed_input_width_(unboxed_input_width),
+        receiver_(receiver),
+        reg_first_(reg_first),
+        reg_second_(reg_second),
+        stk_ptr_(stk_ptr),
+        env_(reinterpret_cast<JNIEnvExt*>(env)),
+        cookie_(env_->local_ref_cookie_),
+        ref_table_(reinterpret_cast<IndirectReferenceTable*>(&(env_->local_refs_table_))),
+        thread_(env_->thread_),
+        boxed_inputs_(nullptr),
+        ref_input_type_(ref_input_type),
+        unboxed_inputs_((count_input > 0)? new void*[unboxed_input_width] : nullptr),
+        gen_types_(new void*[count_input + kMinJniArgCount]),
+        gen_values_(new void*[count_input + kMinJniArgCount])
     {}
 
     void Flatten();
@@ -59,14 +57,6 @@ class InputMarshaller
     {
         return gen_values_.get();
     }
-
-    #define CLEAN_LOCAL(prim, nonprim)                                         \
-        do {                                                                   \
-            for (auto ref : prim)                                              \
-                env_->DeleteLocalRef(ref);                                     \
-            for (auto ref : nonprim)                                           \
-                RemoveIndirectReference(ref_table_, cookie_, ref);             \
-        } while (0);
 
   private:
     int32_t count_input_;

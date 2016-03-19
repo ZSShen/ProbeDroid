@@ -61,8 +61,6 @@ class MethodBundleNative
             else
                 unboxed_input_width_ += kWidthDword;
         }
-        if (!is_static_)
-            unboxed_input_width_ += kWidthDword;
     }
 
     ~MethodBundleNative();
