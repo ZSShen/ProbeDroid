@@ -41,7 +41,7 @@ class InputMarshaller
 
     void Flatten();
     bool BoxInputs();
-    void UnboxInputs();
+    bool UnboxInputs();
 
     jobjectArray GetBoxedInputs()
     {

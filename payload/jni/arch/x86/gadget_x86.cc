@@ -98,6 +98,13 @@ void ArtQuickInstrument(void **ret_type, void **ret_val, void *receiver, void *m
     env->CallVoidMethod(bundle_java, meth_before_exec, boxed_input);
     CHK_EXCP(env, exit(EXIT_FAILURE));
 
+    // Unbox the arguments.
+    if(input_marshaller.UnboxInputs() != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Unbox the input for instrument callback"
+            " before %s.%s%s", bundle_native->GetClassName().c_str(),
+           bundle_native->GetMethodName().c_str(),
+           bundle_native->GetMethodSignature().c_str());
+
     CAT(INFO) << StringPrintf("Test OK");
 }
 
@@ -211,9 +218,97 @@ bool InputMarshaller::BoxInputs()
         }
 
         env_->SetObjectArrayElement(boxed_inputs_, idx++, obj);
+        CHK_EXCP_AND_RET_FAIL(env_);
     }
 
     return PROC_SUCC;
 }
 
+bool InputMarshaller::UnboxInputs()
+{
+    // Scanning pointer for unboxing process.
+    void** scan = unboxed_inputs_.get();
 
+    // Unbox each argument by referencing its original data type.
+    off_t idx = 0;
+    for (char type : ref_input_type_) {
+        jmethodID meth_access;
+        jclass clazz;
+        jobject obj = env_->GetObjectArrayElement(boxed_inputs_, idx++);
+        CHK_EXCP_AND_RET_FAIL(env_);
+        if (type != kTypeObject) {
+            auto iter = g_map_primitive_wrapper->find(type);
+            std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
+            clazz = wrapper->GetClass();
+            meth_access = wrapper->GetAccessor();
+        }
+
+        switch (type) {
+            case kTypeBoolean: {
+                jboolean value = env_->CallBooleanMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeByte: {
+                jbyte value = env_->CallByteMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeChar: {
+                jchar value = env_->CallCharMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeShort: {
+                jshort value = env_->CallShortMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeInt: {
+                jint value = env_->CallIntMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                *scan++ = reinterpret_cast<void*>(value);
+                break;
+            }
+            case kTypeFloat: {
+                jfloat value = env_->CallFloatMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                jfloat* deref = reinterpret_cast<jfloat*>(scan++);
+                *deref = value;
+                break;
+            }
+            case kTypeLong: {
+                jlong value = env_->CallLongMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                jlong* deref = reinterpret_cast<jlong*>(scan);
+                *deref = value;
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeDouble: {
+                jdouble value = env_->CallDoubleMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                jdouble* deref = reinterpret_cast<jdouble*>(scan);
+                *deref = value;
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeObject: {
+                void* ptr_obj = DecodeJObject(thread_, obj);
+                *scan++ = ptr_obj;
+                env_->DeleteLocalRef(obj);
+                break;
+            }
+        }
+    }
+
+    return PROC_SUCC;
+}
