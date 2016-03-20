@@ -8,7 +8,7 @@ LOCAL_C_INCLUDES        +=  ../../common \
                             ../../common/libffi/include \
                             ../../common/libffi/linux-x86 \
                             ../../android/art/runtime \
-                            ./gadget
+                            ./arch
 
 LOCAL_SRC_FILES         :=  ../../common/libffi/src/debug.c \
                             ../../common/libffi/src/prep_cif.c \

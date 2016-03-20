@@ -12,6 +12,8 @@
 
 #include "signature.h"
 #include "logcat.h"
+#include "x86/gadget_x86.h"
+#include "ffi.h"
 
 
 class InstrumentGadgetComposer
@@ -40,11 +42,12 @@ class MethodBundleNative
   public:
     MethodBundleNative(bool is_static, const char* name_class, const char* name_method,
       const char* signature_method, const std::vector<char>& type_inputs, char type_output,
-      uint64_t quick_code_entry_origin, jobject bundle, jmethodID meth_before_exec,
-      jmethodID meth_after_exec)
+      jclass clazz, uint64_t quick_code_entry_origin, jobject bundle,
+      jmethodID meth_before_exec, jmethodID meth_after_exec)
      : is_static_(is_static),
        type_output_(type_output),
-       unboxed_input_width_(0),
+       input_width_(0),
+       clazz_(clazz),
        bundle_(bundle),
        meth_before_exec_(meth_before_exec),
        meth_after_exec_(meth_after_exec),
@@ -57,9 +60,9 @@ class MethodBundleNative
     {
         for (char type : type_inputs_) {
             if ((type == kTypeLong) || (type == kTypeDouble))
-                unboxed_input_width_ += kWidthQword;
+                input_width_ += kWidthQword;
             else
-                unboxed_input_width_ += kWidthDword;
+                input_width_ += kWidthDword;
         }
     }
 
@@ -70,14 +73,24 @@ class MethodBundleNative
         return mutex_;
     }
 
-    int32_t GetUnboxedInputWidth()
+    int32_t GetInputWidth()
     {
-        return unboxed_input_width_;
+        return input_width_;
     }
 
-    const std::vector<char>& GetInputTypes()
+    bool IsStatic()
+    {
+        return is_static_;
+    }
+
+    const std::vector<char>& GetInputType()
     {
         return type_inputs_;
+    }
+
+    char GetOutputType()
+    {
+        return type_output_;
     }
 
     jobject GetBundleObject()
@@ -100,6 +113,11 @@ class MethodBundleNative
         return quick_code_entry_origin_;
     }
 
+    jclass GetClass()
+    {
+        return clazz_;
+    }
+
     const std::string& GetClassName()
     {
         return name_class_;
@@ -118,7 +136,8 @@ class MethodBundleNative
   private:
     bool is_static_;
     char type_output_;
-    int32_t unboxed_input_width_;
+    int32_t input_width_;
+    jclass clazz_;
     jobject bundle_;
     jmethodID meth_before_exec_;
     jmethodID meth_after_exec_;
@@ -195,6 +214,43 @@ class ClassCache
   private:
     jclass clazz_;
     std::unordered_map<std::string, jmethodID> map_meth_;
+};
+
+class MarshallingYard
+{
+  public:
+    MarshallingYard(JNIEnv *env, MethodBundleNative* bundle_native,
+                    InputMarshaller& input_marshaller,
+                    OutputMarshaller& output_marshaller)
+      : env_(reinterpret_cast<JNIEnvExt*>(env)),
+        bundle_native_(bundle_native),
+        input_marshaller_(input_marshaller),
+        output_marshaller_(output_marshaller)
+    {
+        // Resolve some important members of JNIEnvExt for resource management.
+        cookie_ = env_->local_ref_cookie_;
+        ref_table_ = reinterpret_cast<IndirectReferenceTable*>(&(env_->local_refs_table_));
+        thread_ = env_->thread_;
+    }
+
+    void Launch();
+
+  private:
+    bool BoxInput(jobjectArray, void**, const std::vector<char>&);
+    bool UnboxInput(jobjectArray, void**, const std::vector<char>&);
+    void MakeGenericInput(void**, const std::vector<char>&,
+                          jobject*, jclass*, jmethodID*, ffi_type**, void**);
+
+    static const constexpr int32_t kMinJniArgCount = 3;
+
+    uint32_t cookie_;
+    JNIEnvExt* env_;
+    IndirectReferenceTable* ref_table_;
+    void* thread_;
+
+    MethodBundleNative* bundle_native_;
+    InputMarshaller& input_marshaller_;
+    OutputMarshaller& output_marshaller_;
 };
 
 

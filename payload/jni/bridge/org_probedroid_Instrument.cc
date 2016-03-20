@@ -88,13 +88,19 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     const std::vector<char>& type_inputs = parser.GetInputType();
     char type_output = parser.GetOutputType();
 
+    jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
+    if (!g_ref)
+        CAT(FATAL) << StringPrintf("Allocate global reference for class %s",
+                                   cstr_class_name);
+    jclass g_clazz = reinterpret_cast<jclass>(g_ref);
+
     jobject g_bundle = env->NewGlobalRef(bundle);
     if (!g_bundle)
         CAT(FATAL) << StringPrintf("Allocate global reference for a MethodBundle.");
 
     MethodBundleNative* bundle_native = new(std::nothrow) MethodBundleNative(
-        is_static, cstr_class_name, cstr_method_name, cstr_method_sig,
-        type_inputs, type_output, entry_origin, g_bundle, meth_before, meth_after);
+        is_static, cstr_class_name, cstr_method_name, cstr_method_sig, type_inputs,
+        type_output, g_clazz, entry_origin, g_bundle, meth_before, meth_after);
     if (!bundle_native)
         CAT(FATAL) << StringPrintf("Allocate MethodBundleNative for %s.%s%s",
                         cstr_class_name, cstr_method_name, cstr_method_sig);

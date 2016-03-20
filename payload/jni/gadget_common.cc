@@ -1,8 +1,10 @@
+#include <cstdlib>
 #include <new>
 
 #include "gadget.h"
 #include "jni_except-inl.h"
 #include "stringprintf.h"
+#include "ffi.h"
 
 
 // The cached symbols delivered from injector.
@@ -102,6 +104,7 @@ MethodBundleNative::~MethodBundleNative()
 {
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
+    env->DeleteGlobalRef(clazz_);
     env->DeleteGlobalRef(bundle_);
 }
 
@@ -406,7 +409,7 @@ bool ClassCache::LoadClasses(JNIEnv* env)
         }
 
         jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        ClassCache* class_cache = new(std::nothrow)ClassCache(g_clazz);
+        ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
         if (!class_cache) {
             CAT(ERROR) << StringPrintf("Allocate ClassCache for ClassNotFoundException.");
             return PROC_FAIL;
@@ -440,4 +443,293 @@ bool ClassCache::LoadClasses(JNIEnv* env)
     }
 
     return PROC_SUCC;
+}
+
+void MarshallingYard::Launch()
+{
+    const std::vector<char>& input_type = bundle_native_->GetInputType();
+    int32_t input_count = input_type.size();
+    int32_t input_width = bundle_native_->GetInputWidth();
+    int32_t extend_count = input_count + kMinJniArgCount;
+
+    // Prepare the buffers for input and output manipulation.
+    std::unique_ptr<void*[]> arguments(new(std::nothrow) void*[input_width]);
+    if (arguments.get() == nullptr)
+        CAT(FATAL) << StringPrintf("Allocate buffer to store raw arguments.");
+
+    std::unique_ptr<void*[]> gen_value(new(std::nothrow) void*[extend_count]);
+    if (gen_value.get() == nullptr)
+        CAT(FATAL) << StringPrintf("Allocate buffer for libffi value array.");
+
+    std::unique_ptr<ffi_type*[]> gen_type(new(std::nothrow) ffi_type*[extend_count]);
+    if (gen_type.get() == nullptr)
+        CAT(FATAL) << StringPrintf("Allocate buffer for libffi type array.");
+
+    std::string sig_class(kNormObject);
+    auto iter = g_map_class_cache->find(sig_class);
+    jclass clazz = iter->second->GetClass();
+    jobjectArray input_box = env_->NewObjectArray(input_count, clazz, nullptr);
+    CHK_EXCP(env_, exit(EXIT_FAILURE));
+
+    // Extract the raw input arguments.
+    input_marshaller_.Extract(input_width, arguments.get());
+
+    // Prepare the boxed input for the "before-method-execute" instrument callback.
+    if (BoxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Input boxing for \"before-method-execute\" "
+                                   "instrument callback.");
+
+    // Invoke the "before-method-execute" instrument callback.
+    jobject bundle_java = bundle_native_->GetBundleObject();
+    jmethodID meth_before_exec = bundle_native_->GetBeforeExecuteCallback();
+    env_->CallVoidMethod(bundle_java, meth_before_exec, input_box);
+    CHK_EXCP(env_, exit(EXIT_FAILURE));
+
+    // Consume the boxed input which maybe modified by "before-method-execute"
+    // instrument callback.
+    if (UnboxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Input unboxing for \"before-method-execute\" "
+                                   "instrument callback.");
+
+    // Prepare the generic argument lists for libffi to invoke the original method.
+    void* receiver = input_marshaller_.GetReceiver();
+    jobject ref_receiver = AddIndirectReference(ref_table_, cookie_, receiver);
+    jmethodID meth_origin = input_marshaller_.GetMethodID();
+    jclass clazz_origin = bundle_native_->GetClass();
+    MakeGenericInput(arguments.get(), input_type, &ref_receiver, &clazz_origin,
+                     &meth_origin, gen_type.get(), gen_value.get());
+}
+
+bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
+                               const std::vector<char>& input_type)
+{
+    off_t idx = 0;
+    for (char type : input_type) {
+        jmethodID meth_ctor;
+        jclass clazz;
+        jobject obj;
+        if (type != kTypeObject) {
+            auto iter = g_map_primitive_wrapper->find(type);
+            std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
+            clazz = wrapper->GetClass();
+            meth_ctor = wrapper->GetConstructor();
+        }
+
+        switch (type) {
+            case kTypeBoolean: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jboolean real = static_cast<jboolean>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                break;
+            }
+            case kTypeByte: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jbyte real = static_cast<jbyte>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                break;
+            }
+            case kTypeChar: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jchar real = static_cast<jchar>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                break;
+            }
+            case kTypeShort: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jshort real = static_cast<jshort>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                break;
+            }
+            case kTypeInt: {
+                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+                jint real = static_cast<jint>(inter);
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                break;
+            }
+            case kTypeFloat: {
+                jfloat* deref = reinterpret_cast<jfloat*>(scan++);
+                jfloat real = *deref;
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                break;
+            }
+            case kTypeLong: {
+                jlong* deref = reinterpret_cast<jlong*>(scan);
+                jlong real = *deref;
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeDouble: {
+                jdouble* deref = reinterpret_cast<jdouble*>(scan);
+                jdouble real = *deref;
+                obj = env_->NewObject(clazz, meth_ctor, real);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeObject: {
+                void* ptr_obj = *scan++;
+                obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
+                break;
+            }
+        }
+        env_->SetObjectArrayElement(input_box, idx++, obj);
+        CHK_EXCP_AND_RET_FAIL(env_);
+    }
+
+    return PROC_SUCC;
+}
+
+bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
+                                 const std::vector<char>& input_type)
+{
+    off_t idx = 0;
+    for (char type : input_type) {
+        jmethodID meth_access;
+        jclass clazz;
+        jobject obj = env_->GetObjectArrayElement(input_box, idx++);
+        CHK_EXCP_AND_RET_FAIL(env_);
+        if (type != kTypeObject) {
+            auto iter = g_map_primitive_wrapper->find(type);
+            std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
+            clazz = wrapper->GetClass();
+            meth_access = wrapper->GetAccessor();
+        }
+
+        switch (type) {
+            case kTypeBoolean: {
+                jboolean value = env_->CallBooleanMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeByte: {
+                jbyte value = env_->CallByteMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeChar: {
+                jchar value = env_->CallCharMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeShort: {
+                jshort value = env_->CallShortMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                uintptr_t cast = static_cast<uintptr_t>(value);
+                *scan++ = reinterpret_cast<void*>(cast);
+                break;
+            }
+            case kTypeInt: {
+                jint value = env_->CallIntMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                *scan++ = reinterpret_cast<void*>(value);
+                break;
+            }
+            case kTypeFloat: {
+                jfloat value = env_->CallFloatMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                jfloat* deref = reinterpret_cast<jfloat*>(scan++);
+                *deref = value;
+                break;
+            }
+            case kTypeLong: {
+                jlong value = env_->CallLongMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                jlong* deref = reinterpret_cast<jlong*>(scan);
+                *deref = value;
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeDouble: {
+                jdouble value = env_->CallDoubleMethod(obj, meth_access);
+                CHK_EXCP_AND_RET_FAIL(env_);
+                jdouble* deref = reinterpret_cast<jdouble*>(scan);
+                *deref = value;
+                scan += kWidthQword;
+                break;
+            }
+            case kTypeObject: {
+                // Since we will directly use the object reference to call the
+                // original method, we do not decode the refernce here.
+                *scan++ = obj;
+                break;
+            }
+        }
+    }
+
+    return PROC_SUCC;
+}
+
+void MarshallingYard::MakeGenericInput(void** scan, const std::vector<char>& input_type,
+                      jobject* p_ref_receiver, jclass* p_clazz, jmethodID* p_meth,
+                      ffi_type** gen_type, void** gen_value)
+{
+    *gen_type++ = &ffi_type_pointer;
+    *gen_type++ = &ffi_type_pointer;
+    *gen_type++ = &ffi_type_pointer;
+
+    *gen_value++ = &env_;
+    if (bundle_native_->IsStatic()) {
+        // For virtual method call (JNIEnv*, jobject, jmethodID, ...).
+        *gen_value++ = p_ref_receiver;
+    } else
+        // For static method call (JNIEnv*, jclass, jmethodID, ...).
+        *gen_value++ = p_clazz;
+    *gen_value++ = p_meth;
+
+    for (char type : input_type) {
+        switch (type) {
+            case kTypeBoolean:
+                *gen_type++ = &ffi_type_uint8;
+                *gen_value++ = scan++;
+                break;
+            case kTypeByte:
+                *gen_type++ = &ffi_type_sint8;
+                *gen_value++ = scan++;
+                break;
+            case kTypeChar:
+                *gen_type++ = &ffi_type_uint16;
+                *gen_value++ = scan++;
+                break;
+            case kTypeShort:
+                *gen_type++ = &ffi_type_sint16;
+                *gen_value++ = scan++;
+                break;
+            case kTypeInt:
+                *gen_type++ = &ffi_type_sint32;
+                *gen_value++ = scan++;
+                break;
+            case kTypeFloat:
+                *gen_type++ = &ffi_type_float;
+                *gen_value++ = scan++;
+                break;
+            case kTypeLong:
+                *gen_type++ = &ffi_type_sint64;
+                *gen_value++ = scan;
+                scan += kWidthQword;
+                break;
+            case kTypeDouble:
+                *gen_type++ = &ffi_type_double;
+                *gen_value++ = scan;
+                scan += kWidthQword;
+                break;
+            case kTypeObject:
+                *gen_type++ = &ffi_type_pointer;
+                *gen_value++ = scan++;
+                break;
+        }
+    }
 }
