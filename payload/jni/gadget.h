@@ -238,9 +238,14 @@ class MarshallingYard
   private:
     bool BoxInput(jobjectArray, void**, const std::vector<char>&);
     bool UnboxInput(jobjectArray, void**, const std::vector<char>&);
+    bool BoxOutput(jobject*, void**, char);
+    bool UnboxOutput(jobject, void**, char);
+    bool EncapsulateObject(char, void**, jobject*);
+
     void MakeGenericInput(void**, const std::vector<char>&,
                           jobject*, jclass*, jmethodID*, ffi_type**, void**);
-    bool InvokeOrigin(int32_t, jmethodID, ffi_type**, void**, void**);
+    bool InvokeOrigin(int32_t, jmethodID, char, ffi_type**, void**, void**);
+
 
     static const constexpr int32_t kMinJniArgCount = 3;
 

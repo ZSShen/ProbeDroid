@@ -450,6 +450,7 @@ bool ClassCache::LoadClasses(JNIEnv* env)
 void MarshallingYard::Launch()
 {
     const std::vector<char>& input_type = bundle_native_->GetInputType();
+    char output_type = bundle_native_->GetOutputType();
     int32_t input_count = input_type.size();
     int32_t input_width = bundle_native_->GetInputWidth();
     int32_t extend_count = input_count + kMinJniArgCount;
@@ -502,12 +503,19 @@ void MarshallingYard::Launch()
                      &meth_origin, gen_type.get(), gen_value.get());
 
     void* result[kWidthQword];
-    if (InvokeOrigin(extend_count, meth_origin, gen_type.get(),
+    if (InvokeOrigin(extend_count, meth_origin, output_type, gen_type.get(),
                      gen_value.get(), result) != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Invoke %s.%s%s",
                         bundle_native_->GetClassName().c_str(),
                         bundle_native_->GetMethodName().c_str(),
                         bundle_native_->GetMethodSignature().c_str());
+
+    // Prepare the boxed output for the "after-method-execute" instrument callback.
+    jobject output_box;
+    if (BoxOutput(&output_box, result, output_type) != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Output boxing for \"after-method-execute\" "
+                                   "instrument callback.");
+
 }
 
 bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
@@ -515,86 +523,18 @@ bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
 {
     off_t idx = 0;
     for (char type : input_type) {
-        jmethodID meth_ctor;
-        jclass clazz;
         jobject obj;
-        if (type != kTypeObject) {
-            auto iter = g_map_primitive_wrapper->find(type);
-            std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
-            clazz = wrapper->GetClass();
-            meth_ctor = wrapper->GetConstructor();
-        }
-
-        switch (type) {
-            case kTypeBoolean: {
-                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
-                jboolean real = static_cast<jboolean>(inter);
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                break;
-            }
-            case kTypeByte: {
-                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
-                jbyte real = static_cast<jbyte>(inter);
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                break;
-            }
-            case kTypeChar: {
-                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
-                jchar real = static_cast<jchar>(inter);
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                break;
-            }
-            case kTypeShort: {
-                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
-                jshort real = static_cast<jshort>(inter);
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                break;
-            }
-            case kTypeInt: {
-                uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
-                jint real = static_cast<jint>(inter);
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                break;
-            }
-            case kTypeFloat: {
-                jfloat* deref = reinterpret_cast<jfloat*>(scan++);
-                jfloat real = *deref;
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                break;
-            }
-            case kTypeLong: {
-                jlong* deref = reinterpret_cast<jlong*>(scan);
-                jlong real = *deref;
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                scan += kWidthQword;
-                break;
-            }
-            case kTypeDouble: {
-                jdouble* deref = reinterpret_cast<jdouble*>(scan);
-                jdouble real = *deref;
-                obj = env_->NewObject(clazz, meth_ctor, real);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                scan += kWidthQword;
-                break;
-            }
-            case kTypeObject: {
-                void* ptr_obj = *scan++;
-                obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
-                break;
-            }
-        }
+        if (EncapsulateObject(type, scan, &obj) == PROC_FAIL)
+            return PROC_FAIL;
         env_->SetObjectArrayElement(input_box, idx++, obj);
         CHK_EXCP_AND_RET_FAIL(env_);
     }
-
     return PROC_SUCC;
+}
+
+bool MarshallingYard::BoxOutput(jobject* p_obj, void** scan, char output_type)
+{
+    return EncapsulateObject(output_type, scan, p_obj);
 }
 
 bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
@@ -683,6 +623,89 @@ bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
     return PROC_SUCC;
 }
 
+inline bool MarshallingYard::EncapsulateObject(char type, void** scan, jobject* p_obj)
+{
+    jmethodID meth_ctor;
+    jclass clazz;
+    if (type != kTypeObject) {
+        auto iter = g_map_primitive_wrapper->find(type);
+        std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
+        clazz = wrapper->GetClass();
+        meth_ctor = wrapper->GetConstructor();
+    }
+
+    switch (type) {
+        case kTypeVoid:
+            *p_obj = nullptr;
+            break;
+        case kTypeBoolean: {
+            uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+            jboolean real = static_cast<jboolean>(inter);
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            break;
+        }
+        case kTypeByte: {
+            uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+            jbyte real = static_cast<jbyte>(inter);
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            break;
+        }
+        case kTypeChar: {
+            uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+            jchar real = static_cast<jchar>(inter);
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            break;
+        }
+        case kTypeShort: {
+            uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+            jshort real = static_cast<jshort>(inter);
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            break;
+        }
+        case kTypeInt: {
+            uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
+            jint real = static_cast<jint>(inter);
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            break;
+        }
+        case kTypeFloat: {
+            jfloat* deref = reinterpret_cast<jfloat*>(scan++);
+            jfloat real = *deref;
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            break;
+        }
+        case kTypeLong: {
+            jlong* deref = reinterpret_cast<jlong*>(scan);
+            jlong real = *deref;
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            scan += kWidthQword;
+            break;
+        }
+        case kTypeDouble: {
+            jdouble* deref = reinterpret_cast<jdouble*>(scan);
+            jdouble real = *deref;
+            *p_obj = env_->NewObject(clazz, meth_ctor, real);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            scan += kWidthQword;
+            break;
+        }
+        case kTypeObject: {
+            void* ptr_obj = *scan++;
+            *p_obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
+            break;
+        }
+    }
+
+    return PROC_SUCC;
+}
+
 void MarshallingYard::MakeGenericInput(void** scan, const std::vector<char>& input_type,
                       jobject* p_ref_receiver, jclass* p_clazz, jmethodID* p_meth,
                       ffi_type** gen_type, void** gen_value)
@@ -745,7 +768,7 @@ void MarshallingYard::MakeGenericInput(void** scan, const std::vector<char>& inp
 }
 
 bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
-                        ffi_type** gen_type, void** gen_value, void** p_result)
+        char output_type, ffi_type** gen_type, void** gen_value, void** p_result)
 {
     typedef void (*GENFUNC) ();
     #define FFI_CALL(p_value)                                                       \
@@ -758,7 +781,6 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
 
     art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(meth);
     bool is_static = bundle_native_->IsStatic();
-    char output_type = bundle_native_->GetOutputType();
     std::mutex& mutex = bundle_native_->GetMutex();
     uint64_t entry_origin = bundle_native_->GetQuickCodeOriginalEntry();
     uint64_t entry_hook = reinterpret_cast<uint64_t>(g_load_class_quick_compiled);
@@ -898,3 +920,4 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
 
     return PROC_SUCC;
 }
+
