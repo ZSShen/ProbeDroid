@@ -27,6 +27,7 @@ class InstrumentGadgetComposer
     {}
 
     void Compose();
+    static void UnregisterInstrumentGadget(int32_t);
 
   private:
     bool LinkWithAnalysisAPK();

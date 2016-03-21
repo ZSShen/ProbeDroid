@@ -1,6 +1,9 @@
 #include <cstdlib>
+#include <cstring>
 #include <mutex>
 #include <new>
+#include <signal.h>
+#include <errno.h>
 
 #include "gadget.h"
 #include "jni_except-inl.h"
@@ -62,7 +65,13 @@ void InstrumentGadgetComposer::Compose()
     // analysis APK register the methods which it intends to instrument.
     if (RegisterInstrumentGadget() != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Call Instrument.onApplicationStart().");
-    return;
+
+    // Register the SIGTERM signal handler to catch the instrument termination
+    // command sent by analyst. The handler further calls
+    // "void Instrument.onApplicationStop()" to let analysis APK finalize
+    // the instrument task.
+    if (signal(SIGTERM, UnregisterInstrumentGadget) == SIG_ERR)
+        CAT(FATAL) << StringPrintf("%s", strerror(errno));
 }
 
 bool InstrumentGadgetComposer::LinkWithAnalysisAPK()
@@ -100,6 +109,25 @@ bool InstrumentGadgetComposer::RegisterInstrumentGadget()
     CHK_EXCP_AND_RET_FAIL(env_);
 
     return PROC_SUCC;
+}
+
+void InstrumentGadgetComposer::UnregisterInstrumentGadget(int32_t signum)
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+
+    // Resolve the overrode "void Instrument.onApplicationStop()".
+    char sig[kBlahSizeMid];
+    snprintf(sig, kBlahSizeMid, "()%c", kSigVoid);
+    jmethodID meth = env->GetMethodID(g_class_analysis_main,
+                                      kFuncOnApplicationStop, sig);
+    CHK_EXCP(env, exit(EXIT_FAILURE));
+
+    // Invoke it to let the analysis APK finalize the instrument task.
+    env->CallVoidMethod(g_obj_analysis_main, meth);
+    CHK_EXCP(env, exit(EXIT_FAILURE));
+
+    exit(EXIT_SUCCESS);
 }
 
 MethodBundleNative::~MethodBundleNative()

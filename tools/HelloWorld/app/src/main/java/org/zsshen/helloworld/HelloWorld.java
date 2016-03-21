@@ -1,5 +1,7 @@
 package org.zsshen.helloworld;
 
+import android.util.Log;
+
 import org.probedroid.Instrument;
 import org.zsshen.helloworld.bundle.StringBuilderToString;
 
@@ -26,6 +28,6 @@ public class HelloWorld extends Instrument {
 
     @Override
     public void onApplicationStop() {
-
+        Log.d("HelloWorld", "OK Terminate now");
     }
 }
