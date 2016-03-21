@@ -241,6 +241,7 @@ class MarshallingYard
     bool BoxOutput(jobject*, void**, char);
     bool UnboxOutput(jobject, void**, char);
     bool EncapsulateObject(char, bool, void**, jobject*);
+    bool DecapsulateObject(char, bool, void**, jobject);
 
     void MakeGenericInput(void**, const std::vector<char>&,
                           jobject*, jclass*, jmethodID*, ffi_type**, void**);

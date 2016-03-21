@@ -520,6 +520,12 @@ void MarshallingYard::Launch()
     jmethodID meth_after_exec = bundle_native_->GetAfterExecuteCallback();
     env_->CallVoidMethod(bundle_java, meth_after_exec, output_box);
     CHK_EXCP(env_, exit(EXIT_FAILURE));
+
+    // Consume the boxed output which maybe modified by "after-method-execute"
+    // instrument callback.
+    if (UnboxOutput(output_box, arguments.get(), output_type) != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Output unboxing for \"after-method-execute\" "
+                                   "instrument callback.");
 }
 
 bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
@@ -546,85 +552,17 @@ bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
 {
     off_t idx = 0;
     for (char type : input_type) {
-        jmethodID meth_access;
-        jclass clazz;
         jobject obj = env_->GetObjectArrayElement(input_box, idx++);
         CHK_EXCP_AND_RET_FAIL(env_);
-        if (type != kTypeObject) {
-            auto iter = g_map_primitive_wrapper->find(type);
-            std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
-            clazz = wrapper->GetClass();
-            meth_access = wrapper->GetAccessor();
-        }
-
-        switch (type) {
-            case kTypeBoolean: {
-                jboolean value = env_->CallBooleanMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                uintptr_t cast = static_cast<uintptr_t>(value);
-                *scan++ = reinterpret_cast<void*>(cast);
-                break;
-            }
-            case kTypeByte: {
-                jbyte value = env_->CallByteMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                uintptr_t cast = static_cast<uintptr_t>(value);
-                *scan++ = reinterpret_cast<void*>(cast);
-                break;
-            }
-            case kTypeChar: {
-                jchar value = env_->CallCharMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                uintptr_t cast = static_cast<uintptr_t>(value);
-                *scan++ = reinterpret_cast<void*>(cast);
-                break;
-            }
-            case kTypeShort: {
-                jshort value = env_->CallShortMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                uintptr_t cast = static_cast<uintptr_t>(value);
-                *scan++ = reinterpret_cast<void*>(cast);
-                break;
-            }
-            case kTypeInt: {
-                jint value = env_->CallIntMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                *scan++ = reinterpret_cast<void*>(value);
-                break;
-            }
-            case kTypeFloat: {
-                jfloat value = env_->CallFloatMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                jfloat* deref = reinterpret_cast<jfloat*>(scan++);
-                *deref = value;
-                break;
-            }
-            case kTypeLong: {
-                jlong value = env_->CallLongMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                jlong* deref = reinterpret_cast<jlong*>(scan);
-                *deref = value;
-                scan += kWidthQword;
-                break;
-            }
-            case kTypeDouble: {
-                jdouble value = env_->CallDoubleMethod(obj, meth_access);
-                CHK_EXCP_AND_RET_FAIL(env_);
-                jdouble* deref = reinterpret_cast<jdouble*>(scan);
-                *deref = value;
-                scan += kWidthQword;
-                break;
-            }
-            case kTypeObject: {
-                // Since we will directly use the object reference to call the
-                // original method, we do not decode the refernce here.
-                *scan++ = obj;
-                break;
-            }
-        }
+        if (DecapsulateObject(type, false, scan, obj) == PROC_FAIL)
+            return PROC_FAIL;
     }
-
     return PROC_SUCC;
+}
+
+bool MarshallingYard::UnboxOutput(jobject obj, void** scan, char output_type)
+{
+    return DecapsulateObject(output_type, true, scan, obj);
 }
 
 inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
@@ -707,6 +645,90 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
                 *p_obj = reinterpret_cast<jobject>(ptr_obj);
             else
                 *p_obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
+            break;
+        }
+    }
+
+    return PROC_SUCC;
+}
+
+inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
+                                               void** scan, jobject obj)
+{
+    jmethodID meth_access;
+    jclass clazz;
+    if (type != kTypeObject) {
+        auto iter = g_map_primitive_wrapper->find(type);
+        std::unique_ptr<PrimitiveTypeWrapper>& wrapper = iter->second;
+        clazz = wrapper->GetClass();
+        meth_access = wrapper->GetAccessor();
+    }
+
+    switch (type) {
+        case kTypeVoid:
+            break;
+        case kTypeBoolean: {
+            jboolean value = env_->CallBooleanMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            uintptr_t cast = static_cast<uintptr_t>(value);
+            *scan++ = reinterpret_cast<void*>(cast);
+            break;
+        }
+        case kTypeByte: {
+            jbyte value = env_->CallByteMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            uintptr_t cast = static_cast<uintptr_t>(value);
+            *scan++ = reinterpret_cast<void*>(cast);
+            break;
+        }
+        case kTypeChar: {
+            jchar value = env_->CallCharMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            uintptr_t cast = static_cast<uintptr_t>(value);
+            *scan++ = reinterpret_cast<void*>(cast);
+            break;
+        }
+        case kTypeShort: {
+            jshort value = env_->CallShortMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            uintptr_t cast = static_cast<uintptr_t>(value);
+            *scan++ = reinterpret_cast<void*>(cast);
+            break;
+        }
+        case kTypeInt: {
+            jint value = env_->CallIntMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            *scan++ = reinterpret_cast<void*>(value);
+            break;
+        }
+        case kTypeFloat: {
+            jfloat value = env_->CallFloatMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            jfloat* deref = reinterpret_cast<jfloat*>(scan++);
+            *deref = value;
+            break;
+        }
+        case kTypeLong: {
+            jlong value = env_->CallLongMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            jlong* deref = reinterpret_cast<jlong*>(scan);
+            *deref = value;
+            scan += kWidthQword;
+            break;
+        }
+        case kTypeDouble: {
+            jdouble value = env_->CallDoubleMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            jdouble* deref = reinterpret_cast<jdouble*>(scan);
+            *deref = value;
+            scan += kWidthQword;
+            break;
+        }
+        case kTypeObject: {
+            if (must_decode_ref)
+                *scan++ = DecodeJObject(thread_, obj);
+            else
+                *scan++ = obj;
             break;
         }
     }
