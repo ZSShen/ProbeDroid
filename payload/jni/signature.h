@@ -109,8 +109,8 @@ static const char* kThreadDecodeJObject =
 
 extern const uint32_t kNoData;
 extern const uint32_t kDwordInt;
-extern const uint32_t kDowrdFloat;
-extern const uint32_t kQWordLong;
+extern const uint32_t kDwordFloat;
+extern const uint32_t kQwordLong;
 extern const uint32_t kQwordDouble;
 
 class MethodSignatureParser

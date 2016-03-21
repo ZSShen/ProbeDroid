@@ -526,6 +526,9 @@ void MarshallingYard::Launch()
     if (UnboxOutput(output_box, arguments.get(), output_type) != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Output unboxing for \"after-method-execute\" "
                                    "instrument callback.");
+
+    // Inject the raw return value for caller consumption.
+    output_marshaller_.Inject(output_type, result);
 }
 
 bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,

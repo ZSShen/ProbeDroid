@@ -48,8 +48,16 @@ class InputMarshaller
 class OutputMarshaller
 {
   public:
-    OutputMarshaller()
+    OutputMarshaller(void** ret_format, void** ret_value)
+      : ret_format_(ret_format),
+        ret_value_(ret_value)
     {}
+
+    void Inject(char, void**);
+
+  private:
+    void** ret_format_;
+    void** ret_value_;
 };
 
 #endif

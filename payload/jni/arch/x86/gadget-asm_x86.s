@@ -168,9 +168,9 @@ ArtQuickInstrumentTrampoline:
 
     cmpl kQwordDouble, %esi
     je QWORD_DOUBLE
-    cmpl kQWordLong, %esi
+    cmpl kQwordLong, %esi
     je QWORD_LONG
-    cmpl kDowrdFloat, %esi
+    cmpl kDwordFloat, %esi
     je DWORD_FLOAT
 
 DWORD_INT:                  # For the non floating point data type with width

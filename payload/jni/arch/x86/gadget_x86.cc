@@ -57,8 +57,8 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     return clazz;
 }
 
-void ArtQuickInstrument(void **ret_type, void **ret_val, void *ecx, void *eax,
-                        void *edx, void *ebx, void **stack)
+void ArtQuickInstrument(void** ret_format, void** ret_value, void* ecx, void* eax,
+                        void* edx, void* ebx, void** stack)
 {
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
@@ -71,13 +71,11 @@ void ArtQuickInstrument(void **ret_type, void **ret_val, void *ecx, void *eax,
     // Create the gadgets to extract input arguments and to inject output value
     // with machine specific calling convention.
     InputMarshaller input_marshaller(ecx, eax, ebx, edx, stack);
-    OutputMarshaller output_marshaller;
+    OutputMarshaller output_marshaller(ret_format, ret_value);
 
     // The main process to marshall instrument callbacks.
     MarshallingYard yard(env, bundle_native.get(), input_marshaller, output_marshaller);
     yard.Launch();
-
-    CAT(INFO) << StringPrintf("Test OK");
 }
 
 
@@ -95,5 +93,38 @@ void InputMarshaller::Extract(int32_t input_width, void** arguments)
     while (rest > 0) {
         *arguments++ = *stack_++;
         --rest;
+    }
+}
+
+void OutputMarshaller::Inject(char output_type, void** value)
+{
+    switch (output_type) {
+        case kTypeVoid:
+            *reinterpret_cast<uint32_t*>(ret_format_) = kNoData;
+            *ret_value_ = *value;
+            break;
+        case kTypeBoolean:
+        case kTypeByte:
+        case kTypeChar:
+        case kTypeShort:
+        case kTypeInt:
+        case kTypeObject:
+            *reinterpret_cast<uint32_t*>(ret_format_) = kDwordInt;
+            *ret_value_ = *value;
+            break;
+        case kTypeFloat:
+            *reinterpret_cast<uint32_t*>(ret_format_) = kDwordFloat;
+            *ret_value_ = *value;
+            break;
+        case kTypeLong:
+            *reinterpret_cast<uint32_t*>(ret_format_) = kQwordLong;
+            *ret_value_++ = *value++;
+            *ret_value_ = *value;
+            break;
+        case kTypeDouble:
+            *reinterpret_cast<uint32_t*>(ret_format_) = kQwordDouble;
+            *ret_value_++ = *value++;
+            *ret_value_ = *value;
+            break;
     }
 }
