@@ -516,6 +516,10 @@ void MarshallingYard::Launch()
         CAT(FATAL) << StringPrintf("Output boxing for \"after-method-execute\" "
                                    "instrument callback.");
 
+    // Invoke the "after-method-execute" instrument callback.
+    jmethodID meth_after_exec = bundle_native_->GetAfterExecuteCallback();
+    env_->CallVoidMethod(bundle_java, meth_after_exec, output_box);
+    CHK_EXCP(env_, exit(EXIT_FAILURE));
 }
 
 bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
@@ -524,7 +528,7 @@ bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
     off_t idx = 0;
     for (char type : input_type) {
         jobject obj;
-        if (EncapsulateObject(type, scan, &obj) == PROC_FAIL)
+        if (EncapsulateObject(type, false, scan, &obj) == PROC_FAIL)
             return PROC_FAIL;
         env_->SetObjectArrayElement(input_box, idx++, obj);
         CHK_EXCP_AND_RET_FAIL(env_);
@@ -534,7 +538,7 @@ bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
 
 bool MarshallingYard::BoxOutput(jobject* p_obj, void** scan, char output_type)
 {
-    return EncapsulateObject(output_type, scan, p_obj);
+    return EncapsulateObject(output_type, true, scan, p_obj);
 }
 
 bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
@@ -623,7 +627,8 @@ bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
     return PROC_SUCC;
 }
 
-inline bool MarshallingYard::EncapsulateObject(char type, void** scan, jobject* p_obj)
+inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
+                                               void** scan, jobject* p_obj)
 {
     jmethodID meth_ctor;
     jclass clazz;
@@ -698,7 +703,10 @@ inline bool MarshallingYard::EncapsulateObject(char type, void** scan, jobject* 
         }
         case kTypeObject: {
             void* ptr_obj = *scan++;
-            *p_obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
+            if (is_objref)
+                *p_obj = reinterpret_cast<jobject>(ptr_obj);
+            else
+                *p_obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
             break;
         }
     }
