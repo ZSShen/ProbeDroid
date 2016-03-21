@@ -1,8 +1,10 @@
 #include <cstdlib>
+#include <mutex>
 #include <new>
 
 #include "gadget.h"
 #include "jni_except-inl.h"
+#include "mirror/art_method-inl.h"
 #include "stringprintf.h"
 #include "ffi.h"
 
@@ -498,6 +500,14 @@ void MarshallingYard::Launch()
     jclass clazz_origin = bundle_native_->GetClass();
     MakeGenericInput(arguments.get(), input_type, &ref_receiver, &clazz_origin,
                      &meth_origin, gen_type.get(), gen_value.get());
+
+    void* result[kWidthQword];
+    if (InvokeOrigin(extend_count, meth_origin, gen_type.get(),
+                     gen_value.get(), result) != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Invoke %s.%s%s",
+                        bundle_native_->GetClassName().c_str(),
+                        bundle_native_->GetMethodName().c_str(),
+                        bundle_native_->GetMethodSignature().c_str());
 }
 
 bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
@@ -683,11 +693,11 @@ void MarshallingYard::MakeGenericInput(void** scan, const std::vector<char>& inp
 
     *gen_value++ = &env_;
     if (bundle_native_->IsStatic()) {
-        // For virtual method call (JNIEnv*, jobject, jmethodID, ...).
-        *gen_value++ = p_ref_receiver;
-    } else
         // For static method call (JNIEnv*, jclass, jmethodID, ...).
         *gen_value++ = p_clazz;
+    } else
+        // For virtual method call (JNIEnv*, jobject, jmethodID, ...).
+        *gen_value++ = p_ref_receiver;
     *gen_value++ = p_meth;
 
     for (char type : input_type) {
@@ -732,4 +742,159 @@ void MarshallingYard::MakeGenericInput(void** scan, const std::vector<char>& inp
                 break;
         }
     }
+}
+
+bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
+                        ffi_type** gen_type, void** gen_value, void** p_result)
+{
+    typedef void (*GENFUNC) ();
+    #define FFI_CALL(p_value)                                                       \
+    do {                                                                            \
+        std::lock_guard<std::mutex> guard(mutex);                                   \
+        art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry_origin); \
+        ffi_call(&cif, func, p_value, gen_value);                                   \
+        art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry_hook);   \
+    } while (0);
+
+    art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(meth);
+    bool is_static = bundle_native_->IsStatic();
+    char output_type = bundle_native_->GetOutputType();
+    std::mutex& mutex = bundle_native_->GetMutex();
+    uint64_t entry_origin = bundle_native_->GetQuickCodeOriginalEntry();
+    uint64_t entry_hook = reinterpret_cast<uint64_t>(g_load_class_quick_compiled);
+    ffi_cif cif;
+    GENFUNC func;
+
+    switch (output_type) {
+        case kTypeVoid: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             nullptr, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for no return.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticVoidMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallVoidMethod);
+            FFI_CALL(nullptr);
+            break;
+        }
+        case kTypeBoolean: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_uint8, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for boolean returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticBooleanMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallBooleanMethod);
+            jboolean value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jboolean*>(p_result) = value;
+            break;
+        }
+        case kTypeByte: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_sint8, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for byte returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticByteMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallByteMethod);
+            jbyte value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jbyte*>(p_result) = value;
+            break;
+        }
+        case kTypeChar: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_uint16, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for char returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticCharMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallCharMethod);
+            jchar value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jchar*>(p_result) = value;
+            break;
+        }
+        case kTypeShort: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_sint16, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for short returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticShortMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallShortMethod);
+            jshort value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jshort*>(p_result) = value;
+            break;
+        }
+        case kTypeInt: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_sint32, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for int returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticIntMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallIntMethod);
+            jint value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jint*>(p_result) = value;
+            break;
+        }
+        case kTypeLong: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_sint64, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for long returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticLongMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallLongMethod);
+            jlong value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jlong*>(p_result) = value;
+            break;
+        }
+        case kTypeFloat: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_float, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for float returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticFloatMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallFloatMethod);
+            jfloat value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jfloat*>(p_result) = value;
+            break;
+        }
+        case kTypeDouble: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_double, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for double returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticDoubleMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallDoubleMethod);
+            jdouble value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jdouble*>(p_result) = value;
+            break;
+        }
+        case kTypeObject: {
+            if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
+                             &ffi_type_pointer, gen_type) != FFI_OK)
+                CAT(ERROR) << StringPrintf("FFI call for object returned.");
+            if (is_static)
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticObjectMethod);
+            else
+                func = reinterpret_cast<GENFUNC>(env_->functions->CallObjectMethod);
+            jobject value;
+            FFI_CALL(&value);
+            *reinterpret_cast<jobject*>(p_result) = value;
+            break;
+        }
+    }
+
+    return PROC_SUCC;
 }

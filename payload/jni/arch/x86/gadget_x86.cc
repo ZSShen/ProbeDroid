@@ -1,5 +1,4 @@
 #include <memory>
-#include <mutex>
 #include <cstdlib>
 
 #include "gadget_x86.h"

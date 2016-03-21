@@ -240,6 +240,7 @@ class MarshallingYard
     bool UnboxInput(jobjectArray, void**, const std::vector<char>&);
     void MakeGenericInput(void**, const std::vector<char>&,
                           jobject*, jclass*, jmethodID*, ffi_type**, void**);
+    bool InvokeOrigin(int32_t, jmethodID, ffi_type**, void**, void**);
 
     static const constexpr int32_t kMinJniArgCount = 3;
 
