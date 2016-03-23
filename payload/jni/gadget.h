@@ -226,7 +226,9 @@ class MarshallingYard
       : env_(reinterpret_cast<JNIEnvExt*>(env)),
         bundle_native_(bundle_native),
         input_marshaller_(input_marshaller),
-        output_marshaller_(output_marshaller)
+        output_marshaller_(output_marshaller),
+        gc_auto_(),
+        gc_manual_()
     {
         // Resolve some important members of JNIEnvExt for resource management.
         cookie_ = env_->local_ref_cookie_;
@@ -259,6 +261,9 @@ class MarshallingYard
     MethodBundleNative* bundle_native_;
     InputMarshaller& input_marshaller_;
     OutputMarshaller& output_marshaller_;
+
+    std::vector<jobject> gc_auto_;
+    std::vector<jobject> gc_manual_;
 };
 
 
@@ -290,7 +295,7 @@ extern "C" void* ArtQuickInstrumentTrampoline()
 
 // The function which launches the composer that will set all the instrument
 // gadgets towards user designated Java methods for instrumentation.
-extern "C" void* ComposeInstrumentGadget(void*, void*, void*, void*, void*);
+extern "C" void* ComposeInstrumentGadget(void*, void*, void*);
 
 // The function which marshalls the callbacks including the before and after method
 // execution calls for instrumentation. Also, it will invoke the original method

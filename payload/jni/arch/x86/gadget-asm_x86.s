@@ -126,14 +126,11 @@ DecodeJObject:
 .global ComposeInstrumentGadgetTrampoline
 .type ComposeInstrumentGadgetTrampoline, @function
 ComposeInstrumentGadgetTrampoline:
-    push %esp               # The stack pointer (should be accessed via
-                            # %esp + 5 to retrieve the passed arguments.)
-    push %ebx               # The second argument
     push %edx               # The first argument
     push %eax               # The ArtMethod* pointer
     push %ecx               # The receiver pointer
     call ComposeInstrumentGadget
-    addl $20, %esp
+    addl $12, %esp
     ret
 
 
@@ -153,10 +150,10 @@ ArtQuickInstrumentTrampoline:
     push %ecx               # The receiver pointer
 
     movl %esp, %esi         # Pass the address of the first DOWRD which should
-    addl $20, %esi          # be updated with the data type of the return value.
+    addl $28, %esi          # be updated with the data type of the return value.
     push %esi
 
-    addl $8, %esi           # Pass the address of the second QWORD which should
+    subl $4, %esi           # Pass the address of the second QWORD which should
     push %esi               # be updated with the return value.
 
     call ArtQuickInstrument
@@ -174,16 +171,16 @@ ArtQuickInstrumentTrampoline:
     je DWORD_FLOAT
 
 DWORD_INT:                  # For the non floating point data type with width
-    movl (%esp), %eax       # less than or equal to 32 bit, put the return value
+    movl 4(%esp), %eax      # less than or equal to 32 bit, put the return value
     jmp EXIT                # in %eax.
 
 DWORD_FLOAT:
-    movd (%esp), %xmm0      # For the floating point data type with width equal
+    movd 4(%esp), %xmm0     # For the floating point data type with width equal
     jmp EXIT                # to 32 bit, put the return value in %xmm0.
 
 QWORD_LONG:                 # For the non floating point data type with width
-    movl (%esp), %eax       # equal to 64 bit, put the return value in %edx:%eax.
-    movl 4(%esp), %edx
+    movl 4(%esp), %eax      # equal to 64 bit, put the return value in %edx:%eax.
+    movl (%esp), %edx
     jmp EXIT
 
 QWORD_DOUBLE:               # For the floating point data type with width equal

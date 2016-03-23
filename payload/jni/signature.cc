@@ -13,9 +13,10 @@ const uint32_t kQwordDouble = 0x10 ^ 0x2;
 void MethodSignatureParser::Parse()
 {
     // Parse the input types.
-    char* ofst = const_cast<char*>(signature_) + 1;
+    char* ofst = const_cast<char*>(signature_);
     char ch;
     do {
+        ++ofst;
         ch = *ofst;
         switch (ch) {
             case kSigBoolean:
@@ -59,8 +60,7 @@ void MethodSignatureParser::Parse()
             default:
                 break;
         }
-        ++ofst;
-    } while (*ofst != kDeliRightInput);
+    } while (ch != kDeliRightInput);
 
     // Parse the output type.
     ++ofst;
@@ -96,6 +96,4 @@ void MethodSignatureParser::Parse()
             output_ = kTypeObject;
             break;
     }
-
-    return;
 }

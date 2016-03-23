@@ -10,8 +10,7 @@
 #include "jni_except-inl.h"
 
 
-void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
-                              void *arg_second, void *stk_ptr)
+void* ComposeInstrumentGadget(void *ecx, void *eax, void *edx)
 {
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
@@ -27,16 +26,16 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
 
     // Insert the receiver and the first argument into the local indirect
     // reference table, and the reference key is returned.
-    jobject ref_obj = AddIndirectReference(ref_table, cookie, obj);
-    jobject ref_arg_first = AddIndirectReference(ref_table, cookie, arg_first);
+    jobject ref_obj = AddIndirectReference(ref_table, cookie, ecx);
+    jobject ref_arg_first = AddIndirectReference(ref_table, cookie, edx);
 
     // Restore the entry point to the quick compiled code of "loadClass()".
-    art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(meth);
+    art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(eax);
     uint64_t entry = reinterpret_cast<uint64_t>(g_load_class_quick_compiled);
     art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry);
 
     // Enter the instrument gadget composer.
-    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
+    jmethodID meth_id = reinterpret_cast<jmethodID>(eax);
     InstrumentGadgetComposer composer(env, ref_obj, meth_id);
     composer.Compose();
 
@@ -57,7 +56,7 @@ void* ComposeInstrumentGadget(void *obj, void *meth, void *arg_first,
     return clazz;
 }
 
-void ArtQuickInstrument(void** ret_format, void** ret_value, void* ecx, void* eax,
+void ArtQuickInstrument(void** ret_value, void** ret_format, void* ecx, void* eax,
                         void* edx, void* ebx, void** stack)
 {
     JNIEnv* env;

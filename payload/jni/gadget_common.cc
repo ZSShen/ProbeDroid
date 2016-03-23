@@ -501,6 +501,7 @@ void MarshallingYard::Launch()
     jclass clazz = iter->second->GetClass();
     jobjectArray input_box = env_->NewObjectArray(input_count, clazz, nullptr);
     CHK_EXCP(env_, exit(EXIT_FAILURE));
+    gc_auto_.push_back(input_box);
 
     // Extract the raw input arguments.
     input_marshaller_.Extract(input_width, arguments.get());
@@ -551,12 +552,17 @@ void MarshallingYard::Launch()
 
     // Consume the boxed output which maybe modified by "after-method-execute"
     // instrument callback.
-    if (UnboxOutput(output_box, arguments.get(), output_type) != PROC_SUCC)
+    if (UnboxOutput(output_box, result, output_type) != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Output unboxing for \"after-method-execute\" "
                                    "instrument callback.");
 
     // Inject the raw return value for caller consumption.
     output_marshaller_.Inject(output_type, result);
+
+    for (jobject obj : gc_auto_)
+        env_->DeleteLocalRef(obj);
+    for (jobject obj : gc_manual_)
+        RemoveIndirectReference(ref_table_, cookie_, obj);
 }
 
 bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
@@ -564,6 +570,7 @@ bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
 {
     off_t idx = 0;
     for (char type : input_type) {
+        CAT(INFO) << StringPrintf("Type %d", type);
         jobject obj;
         if (EncapsulateObject(type, false, scan, &obj) == PROC_FAIL)
             return PROC_FAIL;
@@ -671,11 +678,13 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
             break;
         }
         case kTypeObject: {
-            void* ptr_obj = *scan++;
+            void* obj = *scan++;
             if (is_objref)
-                *p_obj = reinterpret_cast<jobject>(ptr_obj);
-            else
-                *p_obj = AddIndirectReference(ref_table_, cookie_, ptr_obj);
+                *p_obj = reinterpret_cast<jobject>(obj);
+            else {
+                *p_obj = AddIndirectReference(ref_table_, cookie_, obj);
+                gc_manual_.push_back(*p_obj);
+            }
             break;
         }
     }
@@ -686,6 +695,8 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
 inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
                                                void** scan, jobject obj)
 {
+    gc_auto_.push_back(obj);
+
     jmethodID meth_access;
     jclass clazz;
     if (type != kTypeObject) {
@@ -844,7 +855,7 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
     bool is_static = bundle_native_->IsStatic();
     std::mutex& mutex = bundle_native_->GetMutex();
     uint64_t entry_origin = bundle_native_->GetQuickCodeOriginalEntry();
-    uint64_t entry_hook = reinterpret_cast<uint64_t>(g_load_class_quick_compiled);
+    uint64_t entry_hook = reinterpret_cast<uint64_t>(ArtQuickInstrumentTrampoline);
     ffi_cif cif;
     GENFUNC func;
 
@@ -981,4 +992,3 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
 
     return PROC_SUCC;
 }
-

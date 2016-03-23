@@ -29,6 +29,7 @@ static const char* kFuncLoadDex = "loadDex";
 static const char* kFuncEntries = "entries";
 static const char* kFuncHasMoreElements = "hasMoreElements";
 static const char* kFuncNextElement = "nextElement";
+static const char* kFuncClose = "close";
 static const char* kFuncBooleanValue = "booleanValue";
 static const char* kFuncByteValue = "byteValue";
 static const char* kFuncCharValue = "charValue";

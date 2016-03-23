@@ -263,6 +263,13 @@ bool Bootstrap::LoadAnalysisModule()
         }
     }
 
+    // Resolve "void DexFile.close()".
+    snprintf(sig, kBlahSizeMid, "()%c", kSigVoid);
+    meth = env->GetMethodID(clazz_dexfile, kFuncClose, sig);
+    CHK_EXCP_AND_RET_FAIL(env);
+    env->CallVoidMethod(dexfile, meth);
+    CHK_EXCP_AND_RET_FAIL(env);
+
     env->DeleteLocalRef(path_module);
     env->DeleteLocalRef(path_cache);
     g_jvm->DetachCurrentThread();
@@ -291,9 +298,8 @@ bool Bootstrap::DeployInstrumentGadgetComposer()
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
 
-    char sig[kBlahSizeMid];
-    jthrowable except;
     // Resolve "Class ClassLoader.loadClass(String)".
+    char sig[kBlahSizeMid];
     jclass clazz = env->FindClass(kNormClassLoader);
     CHK_EXCP_AND_RET_FAIL(env);
     snprintf(sig, kBlahSizeMid, "(%s)%s", kSigString, kSigClass);
