@@ -31,6 +31,12 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
         RETHROW(kNormIllegalArgument);
     }
 
+    // Load the hosting class of the to be instrumented method.
+    jobject ref_class = env->CallObjectMethod(g_ref_class_loader,
+                                              g_meth_load_class, name_class);
+    CHK_EXCP_AND_RET(env, RETHROW(kNormClassNotFound));
+    jclass clazz = reinterpret_cast<jclass>(ref_class);
+
     // Normalize the class name.
     char sig[kBlahSizeMid];
     snprintf(sig, kBlahSizeMid, "%s", cstr_class_name);
@@ -42,8 +48,8 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     }
 
     // Resolve the to be instrumented method.
-    jclass clazz = env->FindClass(sig);
-    CHK_EXCP_AND_RET(env, RETHROW(kNormClassNotFound));
+    //jclass clazz = env->FindClass(sig);
+    //CHK_EXCP_AND_RET(env, RETHROW(kNormClassNotFound));
     jmethodID meth_tge;
     if (is_static)
         meth_tge = env->GetStaticMethodID(clazz, cstr_method_name, cstr_method_sig);

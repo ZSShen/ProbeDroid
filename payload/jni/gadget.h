@@ -327,6 +327,11 @@ extern void* g_load_class_quick_compiled;
 extern jclass g_class_analysis_main;
 extern jobject g_obj_analysis_main;
 
+// The cached class loader object and method to load the classes defined in the
+// to be instrumented APK.
+extern jobject g_ref_class_loader;
+extern jmethodID g_meth_load_class;
+
 // The global map to maintain the information about all the instrumented methods
 // of the target app.
 typedef std::unique_ptr<std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>>

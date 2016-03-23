@@ -36,6 +36,8 @@ void* ComposeInstrumentGadget(void *ecx, void *eax, void *edx)
 
     // Enter the instrument gadget composer.
     jmethodID meth_id = reinterpret_cast<jmethodID>(eax);
+    g_ref_class_loader = ref_obj;
+    g_meth_load_class = meth_id;
     InstrumentGadgetComposer composer(env, ref_obj, meth_id);
     composer.Compose();
 

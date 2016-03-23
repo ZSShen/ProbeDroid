@@ -36,6 +36,11 @@ void* g_load_class_quick_compiled;
 jclass g_class_analysis_main;
 jobject g_obj_analysis_main;
 
+// The cached class loader object and method to load the classes defined in the
+// to be instrumented APK.
+jobject g_ref_class_loader;
+jmethodID g_meth_load_class;
+
 // The global map to maintain the information about all the instrumented methods
 // of the target app.
 PtrBundleMap g_map_method_bundle(nullptr);
@@ -570,7 +575,6 @@ bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
 {
     off_t idx = 0;
     for (char type : input_type) {
-        CAT(INFO) << StringPrintf("Type %d", type);
         jobject obj;
         if (EncapsulateObject(type, false, scan, &obj) == PROC_FAIL)
             return PROC_FAIL;
