@@ -531,6 +531,7 @@ void MarshallingYard::Launch()
     // Prepare the generic argument lists for libffi to invoke the original method.
     void* receiver = input_marshaller_.GetReceiver();
     jobject ref_receiver = AddIndirectReference(ref_table_, cookie_, receiver);
+    gc_manual_.push_back(ref_receiver);
     jmethodID meth_origin = input_marshaller_.GetMethodID();
     jclass clazz_origin = bundle_native_->GetClass();
     MakeGenericInput(arguments.get(), input_type, &ref_receiver, &clazz_origin,
