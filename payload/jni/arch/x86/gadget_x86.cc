@@ -58,7 +58,7 @@ void* ComposeInstrumentGadget(void *ecx, void *eax, void *edx)
     return clazz;
 }
 
-void ArtQuickInstrument(void** ret_value, void** ret_format, void* ecx, void* eax,
+void ArtQuickInstrument(void** ret_format, void** ret_value, void* ecx, void* eax,
                         void* edx, void* ebx, void** stack)
 {
     JNIEnv* env;
@@ -79,21 +79,59 @@ void ArtQuickInstrument(void** ret_value, void** ret_format, void* ecx, void* ea
     yard.Launch();
 }
 
-
-void InputMarshaller::Extract(int32_t input_width, void** arguments)
+void InputMarshaller::Extract(const std::vector<char>& input_type, void** arguments)
 {
-    if (input_width == 0)
-        return;
-
-    if (input_width >= 1)
-        *arguments++ = edx_;
-    if (input_width >= 2)
-        *arguments++ = ebx_;
-
-    int32_t rest = input_width - 2;
-    while (rest > 0) {
-        *arguments++ = *stack_++;
-        --rest;
+    off_t idx = 0;
+    for (char type : input_type) {
+        switch (type) {
+            case kTypeBoolean:
+            case kTypeByte:
+            case kTypeChar:
+            case kTypeShort:
+            case kTypeInt:
+                if (idx == 0)
+                    *arguments++ = edx_;
+                else if (idx == 1)
+                    *arguments++ = ebx_;
+                else
+                    *arguments++ = *stack_++;
+                ++idx;
+                break;
+            case kTypeFloat: {
+                void* cast[1];
+                jdouble value;
+                if (idx == 0) {
+                    *cast = edx_;
+                    value = *reinterpret_cast<jfloat*>(cast);
+                }
+                else if(idx == 1) {
+                    *cast = ebx_;
+                    value = *reinterpret_cast<jfloat*>(cast);
+                }
+                else {
+                    *cast = *stack_++;
+                    value = *reinterpret_cast<jfloat*>(cast);
+                }
+                *reinterpret_cast<jdouble*>(arguments) = value;
+                arguments += kWidthQword;
+                ++idx;
+                break;
+            }
+            case kTypeLong:
+            case kTypeDouble:
+                if (idx == 0) {
+                    *arguments++ = edx_;
+                    *arguments++ = ebx_;
+                } else if (idx == 1) {
+                    *arguments++ = ebx_;
+                    *arguments++ = *stack_++;
+                } else {
+                    *arguments++ = *stack_++;
+                    *arguments++ = *stack_++;
+                }
+                idx += kWidthQword;
+                break;
+        }
     }
 }
 

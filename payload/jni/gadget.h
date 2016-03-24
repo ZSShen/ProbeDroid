@@ -60,7 +60,7 @@ class MethodBundleNative
        mutex_()
     {
         for (char type : type_inputs_) {
-            if ((type == kTypeLong) || (type == kTypeDouble))
+            if ((type == kTypeLong) || (type == kTypeFloat) || (type == kTypeDouble))
                 input_width_ += kWidthQword;
             else
                 input_width_ += kWidthDword;
@@ -243,8 +243,8 @@ class MarshallingYard
     bool UnboxInput(jobjectArray, void**, const std::vector<char>&);
     bool BoxOutput(jobject*, void**, char);
     bool UnboxOutput(jobject, void**, char);
-    bool EncapsulateObject(char, bool, void**, jobject*);
-    bool DecapsulateObject(char, bool, void**, jobject);
+    bool EncapsulateObject(char, bool, void***, jobject*);
+    bool DecapsulateObject(char, bool, void***, jobject);
 
     void MakeGenericInput(void**, const std::vector<char>&,
                           jobject*, jclass*, jmethodID*, ffi_type**, void**);

@@ -509,7 +509,7 @@ void MarshallingYard::Launch()
     gc_auto_.push_back(input_box);
 
     // Extract the raw input arguments.
-    input_marshaller_.Extract(input_width, arguments.get());
+    input_marshaller_.Extract(input_type, arguments.get());
 
     // Prepare the boxed input for the "before-method-execute" instrument callback.
     if (BoxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
@@ -576,7 +576,7 @@ bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
     off_t idx = 0;
     for (char type : input_type) {
         jobject obj;
-        if (EncapsulateObject(type, false, scan, &obj) == PROC_FAIL)
+        if (EncapsulateObject(type, false, &scan, &obj) == PROC_FAIL)
             return PROC_FAIL;
         env_->SetObjectArrayElement(input_box, idx++, obj);
         CHK_EXCP_AND_RET_FAIL(env_);
@@ -586,7 +586,7 @@ bool MarshallingYard::BoxInput(jobjectArray input_box, void** scan,
 
 bool MarshallingYard::BoxOutput(jobject* p_obj, void** scan, char output_type)
 {
-    return EncapsulateObject(output_type, true, scan, p_obj);
+    return EncapsulateObject(output_type, true, &scan, p_obj);
 }
 
 bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
@@ -596,7 +596,7 @@ bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
     for (char type : input_type) {
         jobject obj = env_->GetObjectArrayElement(input_box, idx++);
         CHK_EXCP_AND_RET_FAIL(env_);
-        if (DecapsulateObject(type, false, scan, obj) == PROC_FAIL)
+        if (DecapsulateObject(type, false, &scan, obj) == PROC_FAIL)
             return PROC_FAIL;
     }
     return PROC_SUCC;
@@ -604,11 +604,11 @@ bool MarshallingYard::UnboxInput(jobjectArray input_box, void** scan,
 
 bool MarshallingYard::UnboxOutput(jobject obj, void** scan, char output_type)
 {
-    return DecapsulateObject(output_type, true, scan, obj);
+    return DecapsulateObject(output_type, true, &scan, obj);
 }
 
 inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
-                                               void** scan, jobject* p_obj)
+                                               void*** p_scan, jobject* p_obj)
 {
     jmethodID meth_ctor;
     jclass clazz;
@@ -619,6 +619,7 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
         meth_ctor = wrapper->GetConstructor();
     }
 
+    void** scan = *p_scan;
     switch (type) {
         case kTypeVoid:
             *p_obj = nullptr;
@@ -658,13 +659,6 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
             CHK_EXCP_AND_RET_FAIL(env_);
             break;
         }
-        case kTypeFloat: {
-            jfloat* deref = reinterpret_cast<jfloat*>(scan++);
-            jfloat real = *deref;
-            *p_obj = env_->NewObject(clazz, meth_ctor, real);
-            CHK_EXCP_AND_RET_FAIL(env_);
-            break;
-        }
         case kTypeLong: {
             jlong* deref = reinterpret_cast<jlong*>(scan);
             jlong real = *deref;
@@ -673,6 +667,7 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
             scan += kWidthQword;
             break;
         }
+        case kTypeFloat:
         case kTypeDouble: {
             jdouble* deref = reinterpret_cast<jdouble*>(scan);
             jdouble real = *deref;
@@ -693,11 +688,12 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
         }
     }
 
+    *p_scan = scan;
     return PROC_SUCC;
 }
 
 inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
-                                               void** scan, jobject obj)
+                                               void*** p_scan, jobject obj)
 {
     gc_auto_.push_back(obj);
 
@@ -710,6 +706,7 @@ inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
         meth_access = wrapper->GetAccessor();
     }
 
+    void** scan = *p_scan;
     switch (type) {
         case kTypeVoid:
             break;
@@ -747,17 +744,18 @@ inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
             *scan++ = reinterpret_cast<void*>(value);
             break;
         }
-        case kTypeFloat: {
-            jfloat value = env_->CallFloatMethod(obj, meth_access);
-            CHK_EXCP_AND_RET_FAIL(env_);
-            jfloat* deref = reinterpret_cast<jfloat*>(scan++);
-            *deref = value;
-            break;
-        }
         case kTypeLong: {
             jlong value = env_->CallLongMethod(obj, meth_access);
             CHK_EXCP_AND_RET_FAIL(env_);
             jlong* deref = reinterpret_cast<jlong*>(scan);
+            *deref = value;
+            scan += kWidthQword;
+            break;
+        }
+        case kTypeFloat: {
+            jdouble value = env_->CallFloatMethod(obj, meth_access);
+            CHK_EXCP_AND_RET_FAIL(env_);
+            jdouble* deref = reinterpret_cast<jdouble*>(scan);
             *deref = value;
             scan += kWidthQword;
             break;
@@ -779,6 +777,7 @@ inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
         }
     }
 
+    *p_scan = scan;
     return PROC_SUCC;
 }
 
@@ -821,15 +820,12 @@ void MarshallingYard::MakeGenericInput(void** scan, const std::vector<char>& inp
                 *gen_type++ = &ffi_type_sint32;
                 *gen_value++ = scan++;
                 break;
-            case kTypeFloat:
-                *gen_type++ = &ffi_type_float;
-                *gen_value++ = scan++;
-                break;
             case kTypeLong:
                 *gen_type++ = &ffi_type_sint64;
                 *gen_value++ = scan;
                 scan += kWidthQword;
                 break;
+            case kTypeFloat:
             case kTypeDouble:
                 *gen_type++ = &ffi_type_double;
                 *gen_value++ = scan;

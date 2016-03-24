@@ -149,12 +149,12 @@ ArtQuickInstrumentTrampoline:
     push %eax               # The ArtMethod* pointer
     push %ecx               # The receiver pointer
 
-    movl %esp, %esi         # Pass the address of the first DOWRD which should
-    addl $28, %esi          # be updated with the data type of the return value.
+    movl %esp, %esi         # Pass the address of the first QWORD which should
+    addl $20, %esi          # be updated with the return value.
     push %esi
 
-    subl $4, %esi           # Pass the address of the second QWORD which should
-    push %esi               # be updated with the return value.
+    addl $8, %esi           # Pass the address of the second DOWRD which should
+    push %esi               # be updated with the data type of the return value.
 
     call ArtQuickInstrument
 
@@ -171,16 +171,16 @@ ArtQuickInstrumentTrampoline:
     je DWORD_FLOAT
 
 DWORD_INT:                  # For the non floating point data type with width
-    movl 4(%esp), %eax      # less than or equal to 32 bit, put the return value
+    movl (%esp), %eax       # less than or equal to 32 bit, put the return value
     jmp EXIT                # in %eax.
 
 DWORD_FLOAT:
-    movd 4(%esp), %xmm0     # For the floating point data type with width equal
+    movd (%esp), %xmm0      # For the floating point data type with width equal
     jmp EXIT                # to 32 bit, put the return value in %xmm0.
 
 QWORD_LONG:                 # For the non floating point data type with width
-    movl 4(%esp), %eax      # equal to 64 bit, put the return value in %edx:%eax.
-    movl (%esp), %edx
+    movl (%esp), %eax       # equal to 64 bit, put the return value in %edx:%eax.
+    movl 4(%esp), %edx
     jmp EXIT
 
 QWORD_DOUBLE:               # For the floating point data type with width equal

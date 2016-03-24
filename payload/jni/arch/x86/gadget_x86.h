@@ -23,7 +23,7 @@ class InputMarshaller
         stack_(stack + kStackAlignment)
     {}
 
-    void Extract(int32_t, void**);
+    void Extract(const std::vector<char>& input_type, void**);
 
     void* GetReceiver()
     {
