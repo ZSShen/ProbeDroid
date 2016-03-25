@@ -687,8 +687,11 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
             if (is_objref)
                 *p_obj = reinterpret_cast<jobject>(obj);
             else {
-                *p_obj = AddIndirectReference(ref_table_, cookie_, obj);
-                gc_manual_.push_back(*p_obj);
+                if (obj) {
+                    *p_obj = AddIndirectReference(ref_table_, cookie_, obj);
+                    gc_manual_.push_back(*p_obj);
+                } else
+                    *p_obj = nullptr;
             }
             break;
         }
@@ -775,8 +778,12 @@ inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
             break;
         }
         case kTypeObject: {
-            if (must_decode_ref)
-                *scan++ = DecodeJObject(thread_, obj);
+            if (must_decode_ref) {
+                if (obj)
+                    *scan++ = DecodeJObject(thread_, obj);
+                else
+                    *scan++ = nullptr;
+            }
             else
                 *scan++ = obj;
             break;
