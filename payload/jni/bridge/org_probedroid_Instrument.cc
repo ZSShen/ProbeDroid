@@ -76,7 +76,7 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     jboolean after = env->GetBooleanField(bundle, fld_after);
 
     // Get the entry points to the quick compiled code of the instrument callbacks.
-    jmethodID meth_before, meth_after;
+    jmethodID meth_before = nullptr, meth_after = nullptr;
     if (before) {
         snprintf(sig, kBlahSizeMid, "(%c%s)%c", kSigArray, kSigObjectObject, kSigVoid);
         meth_before = env->GetMethodID(clazz_bundle, kFuncBeforeMethodExecute, sig);

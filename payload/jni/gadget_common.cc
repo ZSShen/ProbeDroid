@@ -516,12 +516,13 @@ void MarshallingYard::Launch()
         CAT(FATAL) << StringPrintf("Input boxing for \"before-method-execute\" "
                                    "instrument callback.");
 
-    // Invoke the "before-method-execute" instrument callback.
+    // Invoke the "before-method-execute" instrument callback if necessary.
     jobject bundle_java = bundle_native_->GetBundleObject();
     jmethodID meth_before_exec = bundle_native_->GetBeforeExecuteCallback();
-    env_->CallVoidMethod(bundle_java, meth_before_exec, input_box);
-    CHK_EXCP(env_, exit(EXIT_FAILURE));
-
+    if (meth_before_exec) {
+        env_->CallVoidMethod(bundle_java, meth_before_exec, input_box);
+        CHK_EXCP(env_, exit(EXIT_FAILURE));
+    }
     // Consume the boxed input which maybe modified by "before-method-execute"
     // instrument callback.
     if (UnboxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
@@ -551,10 +552,12 @@ void MarshallingYard::Launch()
         CAT(FATAL) << StringPrintf("Output boxing for \"after-method-execute\" "
                                    "instrument callback.");
 
-    // Invoke the "after-method-execute" instrument callback.
+    // Invoke the "after-method-execute" instrument callback if necessary.
     jmethodID meth_after_exec = bundle_native_->GetAfterExecuteCallback();
-    env_->CallVoidMethod(bundle_java, meth_after_exec, output_box);
-    CHK_EXCP(env_, exit(EXIT_FAILURE));
+    if (meth_after_exec) {
+        env_->CallVoidMethod(bundle_java, meth_after_exec, output_box);
+        CHK_EXCP(env_, exit(EXIT_FAILURE));
+    }
 
     // Consume the boxed output which maybe modified by "after-method-execute"
     // instrument callback.
@@ -611,6 +614,11 @@ bool MarshallingYard::UnboxOutput(jobject obj, void** scan, char output_type)
 inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
                                                void*** p_scan, jobject* p_obj)
 {
+    if (type == kTypeVoid) {
+        *p_obj = nullptr;
+        return PROC_SUCC;
+    }
+
     jmethodID meth_ctor;
     jclass clazz;
     if (type != kTypeObject) {
@@ -622,9 +630,6 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
 
     void** scan = *p_scan;
     switch (type) {
-        case kTypeVoid:
-            *p_obj = nullptr;
-            break;
         case kTypeBoolean: {
             uintptr_t inter = reinterpret_cast<uintptr_t>(*scan++);
             jboolean real = static_cast<jboolean>(inter);
@@ -696,8 +701,10 @@ inline bool MarshallingYard::EncapsulateObject(char type, bool is_objref,
 inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
                                                void*** p_scan, jobject obj)
 {
-    gc_auto_.push_back(obj);
+    if (type == kTypeVoid)
+        return PROC_SUCC;
 
+    gc_auto_.push_back(obj);
     jmethodID meth_access;
     jclass clazz;
     if (type != kTypeObject) {
@@ -709,8 +716,6 @@ inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
 
     void** scan = *p_scan;
     switch (type) {
-        case kTypeVoid:
-            break;
         case kTypeBoolean: {
             jboolean value = env_->CallBooleanMethod(obj, meth_access);
             CHK_EXCP_AND_RET_FAIL(env_);
@@ -863,7 +868,7 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
     switch (output_type) {
         case kTypeVoid: {
             if (ffi_prep_cif(&cif, FFI_DEFAULT_ABI, extend_count,
-                             nullptr, gen_type) != FFI_OK)
+                             &ffi_type_void, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for no return.");
             if (is_static)
                 func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticVoidMethod);

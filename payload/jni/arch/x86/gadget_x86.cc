@@ -89,6 +89,7 @@ void InputMarshaller::Extract(const std::vector<char>& input_type, void** argume
             case kTypeChar:
             case kTypeShort:
             case kTypeInt:
+            case kTypeObject:
                 if (idx == 0)
                     *arguments++ = edx_;
                 else if (idx == 1)
