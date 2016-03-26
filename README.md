@@ -1,121 +1,72 @@
-##DroidProf
+##ProbeDroid
 
 ##Prologue 
-A dynamic binary instrumentation toolkit for application profiling targeting on Android(L) 5.0. Hopefully, it will fly. But it is now under the POC construction. In more detail, ***shared library injection*** is the fundamental technique to support this toolkit. To profile the given application, a component of this toolkit called **injector** will inject a **hooking library** into the target. The library will hook several ART artifacts which interact with the Java class fields and methods of an application, and thus accomplish the goal for data profiling. ***In the current stage, the injector and the preliminary hooking library is done. But the hooking library just supports limited input/output recording for Java APIs.***.  Besides, a primary restriction is that the toolkit is now focusing on Intel x86 architecture.
+A ***dynamic binary instrumentation toolkit*** for analysts to manipulate application on the fly. Currently, it targets on ***Android(L) 5.0*** and ***Intel-x86 ISA***, the  support for the newest Android and other machine architectures would be provided in the near future. In short, ProbeDroid offers a ***Java SDK*** for analysts to craft their own instrument packages. Analysts can register hooks to monitor the interested Java methods. Furthermore, by modifying the method arguments and return value, the application behavior can be dynamically altered as they wish.  However, ProbeDroid ***has only been tested in AVD***. For the real phone deployment, the stability is not guaranteed.  
 
 ##Prerequisite 
-We need the fundamental Android toolchain:  
-- [Android SDK] - To create the AVD targeting on Intel x86 for experiment.  
-- [Android NDK] - To build the profiling toolkit.  
+The fundamental development environment:  
+- [Android SDK] - To build the instrumentation package and to create the AVD.
+- [Android NDK] - To build the ProbeDroid core.  
+- [Apache Ant] - To build the ProbeDroid core.
 Note that,  the API level should be at least 21.
 
 ##Installation
-The toolkit is composed of injector and hooking library, and we illustrate the installation steps respectively.  
-Suppose that:  
-- The absolute path storing DroidProf in your host machine is `PATH_TO_DROIDPROF` .  
-- The working directory in your AVD is `PATH_TO_WORK`.  
+The toolkit is composed of the ***launcher*** and the ***core libraries***, and we illustrate the installation steps respectively.  
+Some terms should be defined first:  
+- `PATH_TO_HOST` - The absolute path storing ProbeDroid source in your host machine.  
+- `PATH_TO_DEVICE` - The working directory in your analysis device.  
  
-####*For Injector* 
-Firstly, we switch to `PATH_TO_DROIDPROF/inject/jni` to build the executable:  
+####*For Launcher* 
+Firstly, switch to `PATH_TO_HOST/inject/jni`:  
 ```sh
 $ ndk-build
 ``` 
-The executable will reside in `PATH_TO_DROID_PROF/inject/libs/x86/inject`  
+The executable will reside in `PATH_TO_HOST/inject/libs/x86/inject`  
 
-Secondly, we push the executable into AVD:
+Secondly, push the executable into the target device:  
 ```sh
-$ adb push PATH_TO_DROID_PROF/inject/libs/x86/inject PATH_TO_WORK/
+$ adb push PATH_TO_HOST/inject/libs/x86/inject PATH_TO_DEVICE/
 ```
-And in the AVD, change the access permission of injector:
+And in the device, change the access permission:  
 ```sh
-$ chmod a+x PATH_TO_WORK/inject
+$ chmod a+x PATH_TO_DEVICE/inject
 ```
 
-####*For Hooking Library*  
-Firstly, we switch to `PATH_TO_DROIDPROF/payload/jni` to build the library:  
+####*For Core Libraries*  
+The core libraries can be further divided into two parts: the native library and the Java jar.  
+
+#####*We illustrate how to build the native library first*
+Firstly, switch to `PATH_TO_HOST/payload/jni`:  
 ```sh
 $ ndk-build
 ``` 
-The library will reside in `PATH_TO_DROID_PROF/payload/libs/x86/libhook.so`  
+The library will reside in `PATH_TO_HOST/payload/libs/x86/libProbeDroid.so`  
 
-Secondly, we push the library into AVD:
+Secondly, push the library into the target device:
 ```sh
-$ adb push PATH_TO_DROID_PROF/payload/libs/x86/libhook.so PATH_TO_WORK/
+$ adb push PATH_TO_HOST/payload/libs/x86/libProbeDroid.so  PATH_TO_DEVICE/
 ```
-And in the AVD, change the access permission of hooking library:
+And in the device, change the access permission:
 ```sh
-$ chmod a+x PATH_TO_WORK/libhook.so
+$ chmod a+x PATH_TO_WORK/libProbeDroid.so
 ```
 
-##Usage  
-#### *Preprocess before Experiment*  
-Firstly, ***current Android enforces SELinux mandatory access control***. To force an arbitrary application load and execute our hooking library, we must temporarily turn off the access control. Note that ***we can only switch SELinux to advisory mode (Warning but Non-Blocking) instead of complete shutdown mode***.  
-For this, in your AVD, just type:  
+#####*Now we illustrate how to build the Java jar*
+Firstly, switch to `PATH_TO_HOST/payload/`:  
 ```sh
-$ su 0 setenforce 0
-```
-Secondly, some applications may install background services which will be  automatically triggered by certain Intent messages. ***To ensure the clean experiment and correct library injection on your target application, you have to shutdown its relevant service processes before running toolkit***.  
-Suppose your target app is google maps, then you can try the following steps:  
-```
-$ ps
-```
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Google Maps.png"/>  
-Find the PID of google maps and kill it.  
-```sh
-$ kill PID
-```
-
-####*Experiment Steps*
-Essentially, Android applications are forked and initialized by **zygote**. To profile the complete runtime behavior of the target application, the hooking library should be injected into application process before it starts execution. Therefore, we have to rely on zygote for process fork event so that we can:  
-- Pause the newly forked application process  
-- Inject the hooking library  
-- Hook several critical points to monitor Java class field and method  
-- Restart the application process  
-
-Seems like a laborious manual effort? Do not worry! The injector already handles the effort you. All you have to do is providing the relevant command line arguments.  
-The usage of the injector is listed below:  
-```
-./inject -z ZYGOTE_PID -a APP_PKG_KEYWORD -l /PATH_TO_WORK/libhook.so
-```  
-
-You can acquire the zygote PID by `ps` command.  
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/PS Zygote.png" width="450px"/>  
-And for the Google maps example, the complete command should like this:  
-```sh
-$ ./inject -z 936 -a maps -l /PATH_TO_WORK/libhook.so
-```  
-
-If the command finishes successfully, you should see the result like:  
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Command Execution.png" width="450px"/>  
-
-You can verify the successful library injection by checking the process memory layout:  
-```sh
-$ cat /proc/PID/maps
-```
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Proc Map.png" width="750px"/>  
-
-Also, the system log can help you extract the debug message printed by the constructor of the library:  
-```sh
-$ logcat -v time -f /dev/kmsg | cat /proc/kmsg
-```  
-<img src="https://raw.githubusercontent.com/ZSShen/DroidProf/master/res/picture/Library Launch.png" width="750px"/>  
+$ ant compile
+$ ant build-jar
+``` 
+The jar file will reside in `PATH_TO_HOST/payload/ProbeDroid.jar`  
 
 
-### Current Progress  
-+ Done Triage  
-  + Hook several Java APIs like StringBuilder.toString() and String.indexOf(String,int). The relevant parsing for parameters and return value is done.  
- 
-+ To Do List 
-  + Plan for more Java utility APIs and Android sensitive APIs.  
-  + Plan for HTML formatted analysis report.
+## Usage
 
-+ Future Work
-  + Currently, the project focuses on recording the API input/output. Other kinds of instrumentation application will be planed when the system becomes stable.  
 
-###Epilogue
+##Epilogue
 If you have any questions, please contact me via the mail: andy.zsshen@gmail.com  
-But please note that the hooking library is now under construction.  
-I will update it soon. :)  
+Please note that the toolkit is still under construction.  Contribution and bug report is welcome.  
 
-[Android SDK]:https://developer.android.com/sdk/index.html#Other
-[Android NDK]:http://developer.android.com/ndk/downloads/index.html
+[Android SDK]:https://developer.android.com/intl/sdk/index.html
+[Android NDK]:http://developer.android.com/intl/tools/sdk/ndk/index.html
+[Apache Ant]:http://ant.apache.org/
