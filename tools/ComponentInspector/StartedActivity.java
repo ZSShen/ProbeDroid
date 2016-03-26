@@ -20,11 +20,10 @@ public class StartedActivity extends MethodBundle {
         // Log the Intent summary content.
         StringBuffer sb = new StringBuffer();
         sb.append(intent.toString());
-
         // Also log the embedded bundle if necessary.
         Bundle extras = intent.getExtras();
         if (extras != null)
-            sb.append(" ").append(intent.getExtras().toString());
+            sb.append(' ').append(intent.getExtras().toString());
 
         if (!ComponentInspector.gLogMap
                 .containsKey(ComponentInspector.KEY_ACTIVITY))

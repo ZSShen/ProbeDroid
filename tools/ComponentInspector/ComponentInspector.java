@@ -53,16 +53,19 @@ public class ComponentInspector extends Instrument {
 
     @Override
     public void onApplicationStop() {
+        Log.d(NAME_MODULE, "OK Terminate now");
+
         StringBuffer sb = new StringBuffer();
         ArrayList<String> list = gLogMap.get(KEY_ACTIVITY);
-        sb.append(KEY_ACTIVITY).append("\n");
+        sb.append(KEY_ACTIVITY).append('\n');
         for (String msg : list)
-            sb.append(msg).append("\n");
+            sb.append(msg).append('\n');
 
+        sb.append('\n');
         list = gLogMap.get(KEY_SERVICE);
-        sb.append(KEY_SERVICE).append("\n");
+        sb.append(KEY_SERVICE).append('\n');
         for (String msg : list)
-            sb.append(msg).append("\n");
+            sb.append(msg).append('\n');
 
         File file = new File("/data/data/com.kkbox.kktix/InstrumentResult.txt");
         BufferedWriter output = null;

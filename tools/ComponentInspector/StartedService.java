@@ -23,7 +23,7 @@ public class StartedService extends MethodBundle {
         // Also log the embedded bundle if necessary.
         Bundle extras = intent.getExtras();
         if (extras != null)
-            sb.append(" ").append(intent.getExtras().toString());
+            sb.append(' ').append(intent.getExtras().toString());
 
         if (!ComponentInspector.gLogMap
                 .containsKey(ComponentInspector.KEY_SERVICE))
