@@ -5,46 +5,46 @@ A ***dynamic binary instrumentation toolkit*** for analysts to manipulate applic
 
 ##Prerequisite 
 The fundamental development environment:  
-- [Android SDK] - To build the instrumentation package and to create the AVD.
+- [Android SDK] - To build the instrumentation package and to create the AVD.  
 - [Android NDK] - To build the ProbeDroid core.  
-- [Apache Ant] - To build the ProbeDroid core.
-Note that,  the API level should be at least 21.
+- [Apache Ant] - To build the ProbeDroid core.  
+Note that,  the API level should be at least 21.  
 
 ##Installation
 The toolkit is composed of the ***launcher*** and the ***core libraries***, and we illustrate the installation steps respectively.  
 Some terms should be defined first:  
-- `PATH_TO_HOST` - The absolute path storing ProbeDroid source in your host machine.  
-- `PATH_TO_DEVICE` - The working directory in your analysis device.  
+- `PATH_IN_HOST` - The absolute path storing ProbeDroid source in your host machine.  
+- `PATH_IN_DEVICE` - The working directory in your analysis device.  
  
 ####*For Launcher* 
-Firstly, switch to `PATH_TO_HOST/inject/jni`:  
+Firstly, switch to `PATH_IN_HOST/inject/jni`:  
 ```sh
 $ ndk-build
 ``` 
-The executable will reside in `PATH_TO_HOST/inject/libs/x86/inject`  
+The executable will reside in `PATH_IN_HOST/inject/libs/x86/inject`  
 
 Secondly, push the executable into the target device:  
 ```sh
-$ adb push PATH_TO_HOST/inject/libs/x86/inject PATH_TO_DEVICE/
+$ adb push PATH_IN_HOST/inject/libs/x86/inject PATH_IN_DEVICE/
 ```
 And in the device, change the access permission:  
 ```sh
-$ chmod a+x PATH_TO_DEVICE/inject
+$ chmod a+x PATH_IN_DEVICE/inject
 ```
 
 ####*For Core Libraries*  
 The core libraries can be further divided into two parts: the native library and the Java jar.  
 
 #####*We illustrate how to build the native library first*
-Firstly, switch to `PATH_TO_HOST/payload/jni`:  
+Firstly, switch to `PATH_IN_HOST/payload/jni`:  
 ```sh
 $ ndk-build
 ``` 
-The library will reside in `PATH_TO_HOST/payload/libs/x86/libProbeDroid.so`  
+The library will reside in `PATH_IN_HOST/payload/libs/x86/libProbeDroid.so`  
 
 Secondly, push the library into the target device:
 ```sh
-$ adb push PATH_TO_HOST/payload/libs/x86/libProbeDroid.so  PATH_TO_DEVICE/
+$ adb push PATH_IN_HOST/payload/libs/x86/libProbeDroid.so  PATH_IN_DEVICE/
 ```
 And in the device, change the access permission:
 ```sh
@@ -52,12 +52,12 @@ $ chmod a+x PATH_TO_WORK/libProbeDroid.so
 ```
 
 #####*Now we illustrate how to build the Java jar*
-Firstly, switch to `PATH_TO_HOST/payload/`:  
+Firstly, switch to `PATH_IN_HOST/payload/`:  
 ```sh
 $ ant compile
 $ ant build-jar
 ``` 
-The jar file will reside in `PATH_TO_HOST/payload/ProbeDroid.jar`  
+The jar file will reside in `PATH_IN_HOST/payload/ProbeDroid.jar`  
 
 
 ## Usage
