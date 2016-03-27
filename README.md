@@ -1,22 +1,27 @@
 ##ProbeDroid
 
-##Prologue 
+##**Prologue**
 A ***dynamic binary instrumentation toolkit*** for analysts to manipulate application on the fly. Currently, it targets on ***Android(L) 5.0*** and ***Intel-x86 ISA***, the  support for the newest Android and other machine architectures would be provided in the near future. In short, ProbeDroid offers a ***Java SDK*** for analysts to craft their own instrument packages. Analysts can register hooks to monitor the interested Java methods. Furthermore, by modifying the method arguments and return value, the application behavior can be dynamically altered as they wish.  However, ProbeDroid ***has only been tested in AVD***. For the real phone deployment, the stability is not guaranteed.  
 
-##Prerequisite 
+---
+
+##**Prerequisite**
 The fundamental development environment:  
 - [Android SDK] - To build the instrumentation package and to create the AVD.  
 - [Android NDK] - To build the ProbeDroid core.  
 - [Apache Ant] - To build the ProbeDroid core.  
-Note that,  the API level should be at least 21.  
 
-##Installation
+Note that,  the Android API level should be at least 21.  
+
+---
+
+##**Installation**
 The toolkit is composed of the ***launcher*** and the ***core libraries***, and we illustrate the installation steps respectively.  
 Some terms should be defined first:  
 - `PATH_IN_HOST` - The absolute path storing ProbeDroid source in your host machine.  
 - `PATH_IN_DEVICE` - The working directory in your analysis device.  
  
-####*For Launcher* 
+####**For Launcher** 
 Firstly, switch to `PATH_IN_HOST/inject/jni`:  
 ```sh
 $ ndk-build
@@ -31,11 +36,11 @@ And in the device, change the access permission:
 ```sh
 $ chmod a+x PATH_IN_DEVICE/inject
 ```
-
-####*For Core Libraries*  
+---
+####**For Core Libraries**  
 The core libraries can be further divided into two parts: the native library and the Java jar.  
 
-#####*We illustrate how to build the native library first*
+#####**We illustrate how to build the native library first**
 Firstly, switch to `PATH_IN_HOST/payload/jni`:  
 ```sh
 $ ndk-build
@@ -50,8 +55,9 @@ And in the device, change the access permission:
 ```sh
 $ chmod a+x PATH_TO_WORK/libProbeDroid.so
 ```
+---
 
-#####*Now we illustrate how to build the Java jar*
+#####**Now we illustrate how to build the Java jar**
 Firstly, switch to `PATH_IN_HOST/payload/`:  
 ```sh
 $ ant compile
@@ -59,11 +65,14 @@ $ ant build-jar
 ``` 
 The jar file will reside in `PATH_IN_HOST/payload/ProbeDroid.jar`  
 
+---
 
-## Usage
+## **Usage**
 
 
-##Epilogue
+---
+
+##**Epilogue**
 If you have any questions, please contact me via the mail: andy.zsshen@gmail.com  
 Please note that the toolkit is still under construction.  Contribution and bug report is welcome.  
 
