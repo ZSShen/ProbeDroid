@@ -6,7 +6,7 @@ import org.probedroid.support.MethodBundle;
  * The entry point of ProbeDroid which defines the callbacks indicating the
  * change of app life cycle and also provides the interfaces for analysts to
  * register the instrumentation gadgets for interested methods. <b><i>Analysts
- * should inherit this Instrument class as the main class of their analysis
+ * should inherit this class as the main class of their analysis
  * package.</i></b>
  *
  * <pre class="prettyprint">
@@ -42,7 +42,7 @@ public abstract class Instrument {
     }
 
     /**
-     * Let analyst to <b><i>register instrument gadget for the interested
+     * Let analysts to <b><i>register instrument gadget for the interested
      * method.</i></b> Currently, the abstract method or native method is not
      * supported yet.
      *
@@ -81,7 +81,7 @@ public abstract class Instrument {
 
     /**
      * The callback indicating that the instrumented app is just launched.
-     * <b><i>Analyst should override this method for initialization.</i></b>
+     * <b><i>Analysts should override this method for initialization.</i></b>
      * Like registering the instrumentation gadgets or creating the custom
      * profiling utilities.
      */
@@ -89,7 +89,7 @@ public abstract class Instrument {
 
     /**
      * The callback indicating that the instrumented app is just terminated.
-     * <b><i>Analyst should override this method for finalization.</i></b> Like
+     * <b><i>Analysts should override this method for finalization.</i></b> Like
      * dumping the profiled information to the external storage.
      */
     public abstract void onApplicationStop();
