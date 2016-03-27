@@ -3,8 +3,6 @@
 ##**Prologue**
 A ***dynamic binary instrumentation toolkit*** for analysts to manipulate application on the fly. Currently, it targets on ***Android(L) 5.0*** and ***Intel-x86 ISA***, the  support for the newest Android and other machine architectures would be provided in the near future. In short, ProbeDroid offers a ***Java SDK*** for analysts to craft their own instrument packages. Analysts can register hooks to monitor the interested Java methods. Furthermore, by modifying the method arguments and return value, the application behavior can be dynamically altered as they wish.  However, ProbeDroid ***has only been tested in AVD***. For the real phone deployment, the stability is not guaranteed.  
 
----
-
 ##**Prerequisite**
 The fundamental development environment:  
 - [Android SDK] - To build the instrumentation package and to create the AVD.  
@@ -12,8 +10,6 @@ The fundamental development environment:
 - [Apache Ant] - To build the ProbeDroid core.  
 
 Note that,  the Android API level should be at least 21.  
-
----
 
 ##**Installation**
 The toolkit is composed of the ***launcher*** and the ***core libraries***, and we illustrate the installation steps respectively.  
@@ -55,7 +51,6 @@ And in the device, change the access permission:
 ```sh
 $ chmod a+x PATH_TO_WORK/libProbeDroid.so
 ```
----
 
 #####**Now we illustrate how to build the Java jar**
 Firstly, switch to `PATH_IN_HOST/payload/`:  
@@ -65,12 +60,8 @@ $ ant build-jar
 ``` 
 The jar file will reside in `PATH_IN_HOST/payload/ProbeDroid.jar`  
 
----
-
 ## **Usage**
 
-
----
 
 ##**Epilogue**
 If you have any questions, please contact me via the mail: andy.zsshen@gmail.com  
