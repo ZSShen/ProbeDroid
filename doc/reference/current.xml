@@ -1,0 +1,121 @@
+<api>
+<package name="org.probedroid"
+>
+<class name="Instrument"
+ extends="java.lang.Object"
+ abstract="true"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+<constructor name="Instrument"
+ type="org.probedroid.Instrument"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+</constructor>
+<method name="instrumentMethod"
+ return="void"
+ abstract="false"
+ native="false"
+ synchronized="false"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+<parameter name="isStatic" type="boolean">
+</parameter>
+<parameter name="nameClass" type="java.lang.String">
+</parameter>
+<parameter name="nameMethod" type="java.lang.String">
+</parameter>
+<parameter name="signatureMethod" type="java.lang.String">
+</parameter>
+<parameter name="bundle" type="org.probedroid.support.MethodBundle">
+</parameter>
+<exception name="ClassNotFoundException" type="java.lang.ClassNotFoundException">
+</exception>
+<exception name="IllegalArgumentException" type="java.lang.IllegalArgumentException">
+</exception>
+<exception name="NoSuchMethodException" type="java.lang.NoSuchMethodException">
+</exception>
+</method>
+<method name="onApplicationStart"
+ return="void"
+ abstract="true"
+ native="false"
+ synchronized="false"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+</method>
+<method name="onApplicationStop"
+ return="void"
+ abstract="true"
+ native="false"
+ synchronized="false"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+</method>
+</class>
+</package>
+<package name="org.probedroid.support"
+>
+<class name="MethodBundle"
+ extends="java.lang.Object"
+ abstract="true"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+<constructor name="MethodBundle"
+ type="org.probedroid.support.MethodBundle"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+<parameter name="interceptBefore" type="boolean">
+</parameter>
+<parameter name="interceptAfter" type="boolean">
+</parameter>
+</constructor>
+<method name="afterMethodExecute"
+ return="void"
+ abstract="true"
+ native="false"
+ synchronized="false"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+<parameter name="output" type="java.lang.Object">
+</parameter>
+</method>
+<method name="beforeMethodExecute"
+ return="void"
+ abstract="true"
+ native="false"
+ synchronized="false"
+ static="false"
+ final="false"
+ deprecated="not deprecated"
+ visibility="public"
+>
+<parameter name="inputs" type="java.lang.Object[]">
+</parameter>
+</method>
+</class>
+</package>
+</api>
