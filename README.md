@@ -3,6 +3,11 @@
 ## **Prologue**  
 A ***dynamic binary instrumentation toolkit*** for analysts to manipulate application on the fly. Currently, it targets on ***Android(L) 5.0*** and ***Intel-x86 ISA***, the  support for the newest Android and other machine architectures would be provided in the near future. In short, ProbeDroid offers a ***Java library*** for analysts to craft their own instrumentation packages. Analysts can register hooks to monitor the interested Java methods. Furthermore, by modifying the method arguments and return value, the application behavior can be dynamically altered as they wish.  However, ProbeDroid ***has only been tested in AVD***. For the real phone deployment, the stability is not guaranteed.  Specifically, you have to root the phone.
 
+#### **ProbeDroid API**
+[Link to JavaDoc] (http://zsshen.github.io/ProbeDroid/doc/index.html)
+
+
+
 ## **Prerequisite**  
 The fundamental development environment:  
 - [Android SDK] - To build the instrumentation package and to create the AVD.  
@@ -128,13 +133,15 @@ For this, in the experiment device, just type:
     5. Start GoogleMaps by using Android `am` command or touching the GoogleMaps icon shown by Android Launcher.  
 
     6. If the instrumentation started successfully, you will see the similar message like this:  
-    <img src="https://github.com/ZSShen/ProbeDroid/blob/master/res/TaskStarted.png" width="450px"/>  
-    Then you can check the ***logcat*** debug message shown in Android Studio to follow the process.  
-<img src="https://github.com/ZSShen/ProbeDroid/blob/master/res/GadgetDeployment.png" />  
+        <img src="https://github.com/ZSShen/ProbeDroid/blob/master/res/TaskStarted.png" width="450px"/>  
+
+        Then you can check the ***logcat*** debug message shown in Android Studio to follow the process.  
+        <img src="https://github.com/ZSShen/ProbeDroid/blob/master/res/GadgetDeployment.png" />  
+
     7. If you plan to terminate the instrumentation, type:  
         ```
         $ kill -SIGTERM APP_PID
-        ```
+        ```  
         After finalization, you can acquire the profiled data if any.  
 
 ## **Epilogue**
