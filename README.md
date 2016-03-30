@@ -144,6 +144,10 @@ For this, in the experiment device, just type:
         ```  
         After finalization, you can acquire the profiled data if any.  
 
+3.  You can also refer to the following demo videos.
+    1.  [Simple tool to instrument GoogleMaps](https://www.youtube.com/watch?v=6_kg-229yz4)
+    2.  [Simple tool to instrument KKTix](https://www.youtube.com/watch?v=KV8gRs0xWQ8)
+
 ## **Epilogue**
 If you have any questions, please contact me via the mail: andy.zsshen@gmail.com  
 Please note that the toolkit is still under construction.  Contribution and bug report is welcome.  
