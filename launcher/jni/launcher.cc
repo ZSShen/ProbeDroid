@@ -23,7 +23,7 @@ static const char kOptClassName = 'c';
 void PrintUsage()
 {
     const char *usage = \
-    "Usage: ./inject\n"
+    "Usage: ./launcher\n"
     "               --zygote [-z] PID (The zygote process id)\n"
     "               --app    [-a] APPNAME (The package name of target app)\n"
     "               --lib    [-l] LIBPATH (The path name of ProbeDroid core library)\n"
@@ -31,13 +31,13 @@ void PrintUsage()
     "               --class  [-c] CLASSNAME (The full qualified main class name of analysis package)\n"
     "\n"
     "Example:\n"
-    "./inject --zygote 934"
+    "./launcher --zygote 934"
             " --app com.google.android.app.maps"
             " --lib /data/local/tmp/libprobedroid.so"
             " --module /data/local/tmp/Instument.apk"
             " --class org.zsshen.instument.Main\n"
     "\n"
-    "./inject -z 934"
+    "./launcher -z 934"
             " -a com.google.android.app.maps"
             " -l /data/local/tmp/libprobedroid.so"
             " -m /data/local/tmp/Instument.apk"
@@ -94,7 +94,7 @@ int main(int32_t argc, char** argv)
         return EXIT_FAILURE;
     }
 
-    // Start to inject the designated shared object.
+    // Start to launcher the designated shared object.
     proc::EggHunter hunter;
     hunter.Hunt(pid_zygote, app_name, lib_path, module_path, class_name);
 

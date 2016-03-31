@@ -324,7 +324,7 @@ bool Bootstrap::DeployInstrumentGadgetComposer()
 
 }
 
-void __attribute__((constructor)) HookEntry()
+void __attribute__((constructor)) BootEntry()
 {
     CAT(INFO) << StringPrintf("Instrument Bootstrap, pid=%d\n", getpid());
 
