@@ -12,13 +12,13 @@ A ***process level dynamic binary instrumentation kit***  for analysts to manipu
 
 ## **How to Compile ProbeDroid Runtime**  
 
-#### **1. Prerequisite**
+### **1. Prerequisite**
 +  [Android NDK]  
 +  [Apache Ant]  
 
 Note that,  the Android ***API level*** should be ***21***.
 
-#### **2. Terminology**
+### **2. Terminology**
 The ProbeDroid Runtime is composed of the ***Launcher*** and the ***Engine***:  
 +  ***Launcher*** - Used to inject the engine and the custom instrumentation package into the target process.  
 +  ***Engine*** - Used to marshal the control flow between Android Runtime and the instrumentation package.  
@@ -27,18 +27,20 @@ The frequently used path name identifiers:
 +  ***`PATH_IN_HOST`*** - The absolute path storing ProbeDroid Runtime source in your host machine.  
 +  ***`PATH_IN_DEVICE`*** - The working directory in your experiment device. `/data/local/tmp` is recommended.  
 
-#### **3. Build Launcher**
+### **3. Build Launcher**
 1.  Switch to `PATH_IN_HOST/launcher/jni`, and type:  
     ```
     $ ndk-build
     ```  
+
     The launcher executable should reside in `PATH_IN_HOST/launcher/libs/x86/launcher`.  
 
-#### **4. Build Engine**
+### **4. Build Engine**
 1.  Switch to `PATH_IN_HOST/engine/jni`, and type:  
     ```
     $ ndk-build
     ```  
+
     The native library should reside in `PATH_IN_HOST/engine/libs/x86/libProbeDroid.so`.  
 
 2.  Switch to `PATH_IN_HOST/engine`, and type:  
@@ -46,6 +48,7 @@ The frequently used path name identifiers:
     $ ant compile
     $ ant build-jar
     ```  
+
     The java library jar should reside in `PATH_IN_HOST/engine/ProbeDroid.jar`.  
 
 
