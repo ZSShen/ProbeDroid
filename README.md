@@ -136,6 +136,19 @@ The frequently used path name identifiers:
 
 For the detailed deployment information, please refer to the wiki page [How to Start Instrumentation].
 
+## **Demo**
+
+#### **Instrument GoogleMaps**
+| [![GoogleMaps](http://img.youtube.com/vi/6_kg-229yz4/hqdefault.jpg)](https://www.youtube.com/watch?v=6_kg-229yz4&nohtml5=False) |
+|---|
+| A simple instrumentation tool which ***tracks the strings converted from StringBuilder object***. By taking some forensics towards the converted strings, you would notice that GoogleMaps applies Java reflection to accomplish some network authentication. Also, It will dynamically generate some C/C++ code and compile it for map rendering. |
+
+
+#### **Instrument KKTix**
+| [![KKTix](http://img.youtube.com/vi/KV8gRs0xWQ8/hqdefault.jpg)](https://www.youtube.com/watch?v=KV8gRs0xWQ8) |
+|---|
+| A simple instrumentation tool which ***tracks the started Activities and Services***. By taking some forensics towards the tracked components, you would notice that KKTix applies several kinds of Activies to render the ticket booking pages. Also, it starts a  Service for background computation. |
+
 ## **License**
 Except for the following source code:  
 + `android/art/runtime/`, `common/log.*`, `common/stringprintf.*`, `common/utf.*`, and `common/macros.h` subtrees belong to [AOSP], which are licensed under ***Apache v2.0***.  
