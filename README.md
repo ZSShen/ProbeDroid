@@ -26,12 +26,13 @@ We need [Android NDK] and [Apache Ant] to build ProbeDroid Runtime.
 
 #### **1. Terminology**
 The ProbeDroid Runtime is composed of the ***Launcher*** and the ***Engine***:  
-+  ***Launcher*** - Used to inject the engine and the custom instrumentation package into the target process.  
-+  ***Engine*** - Used to marshal the control flow between Android Runtime and the instrumentation package.  
+
++  Launcher - Used to inject the engine and the custom instrumentation package into the target process.  
++  Engine - Used to marshal the control flow between Android Runtime and the instrumentation package.  
 
 The frequently used path name identifiers:  
-+  ***`PATH_IN_HOST`*** - The absolute path storing ProbeDroid Runtime source in your host machine.  
-+  ***`PATH_IN_DEVICE`*** - The working directory in your experiment device. `/data/local/tmp` is recommended.  
+
++  `PATH_IN_HOST` - The absolute path storing ProbeDroid Runtime source in your host machine.  
 
 #### **2. Build Launcher**
 1.  Switch to `PATH_IN_HOST/launcher/jni`, and type:  
@@ -61,7 +62,7 @@ The frequently used path name identifiers:
 ## **How to Develop Instrumentation Package**
 We recommend you to apply [Android Studio] for development.  
 
-1.  Create an Android Studio project.  
+1.  Create an Android Studio project.  The ***API level*** should be ***21***.
 
 2.  Import the library jar `ProbeDroid.jar` into the project.  
 
@@ -74,9 +75,66 @@ We recommend you to apply [Android Studio] for development.
 For the detailed development information, please refer to the wiki page [How to Develop Instrumentation Package].
 
 
-## **How to Launch Instrumentation**
+## **How to Start Instrumentation**
+We need [Android SDK] to create the virtual device.
 
+#### **1. Terminology**
+The frequently used path name identifiers:  
 
++  `PATH_IN_HOST` - The absolute path storing ProbeDroid Runtime source in your host machine.
++  `PATH_IN_DEVICE` - The working directory in your experiment device. `/data/local/tmp` is recommended.
++  `PATH_YOUR_PACKAGE` - The path storing your instrumentation package.
+
+#### **2. Create Virtual Device**
+1.  Create a virtual device with ***Intel x86 ISA*** and ***API level 21***.  
+
+2.  Boot up the virtual device.
+
+3.  Turn off the ***SEAndroid*** mandatory access control:
+    ```
+    $ su 0 setenforce 0
+    ``` 
+
+#### **3. Deploy ProbeDroid Runtime**
+1.  Move the ProbeDroid launcher to the experiment device:  
+    ```
+    $ adb push PATH_IN_HOST/launcher/libs/x86/launcher PATH_IN_DEVICE/
+    $ chmod a+x PATH_IN_DEVICE/launcher
+    ```
+
+2.  Move the ProbeDroid engine to the experiment device:  
+    ```
+    $ adb push PATH_IN_HOST/engine/libs/x86/libProbeDroid.so  PATH_IN_DEVICE/
+    $ chmod a+x PATH_IN_DEVICE/libProbeDroid.so
+    ```
+
+#### **4. Deploy Instrumentation Package**
+1.  Move your instrumentation package to the experiment device:  
+    ```
+    $ adb push PATH_YOUR_PACKAGE PATH_IN_DEVICE
+    ```
+
+#### **5. Start Instrumentation**
+1.  Ensure that the target app is not active before starting instrumentation.  
+    For this:  
+        1. Applying `ps` command to resolve the process id of the target app.  
+        2. Applying `kill PID` command to kill the target app if it is active.  
+
+2.  Acquire the zygote process id by `ps` command.  
+
+3.  Run the ProbeDroid launcher.  
+    ```
+        Usage: ./launcher
+            --zygote [-z] PID        (The zygote process id)
+            --app    [-a] APPNAME    (The package name of the target app)
+            --lib    [-l] LIBPATH    (The path name of libProbeDroid.so)
+            --module [-m] MODULEPATH (The path name of your instrumentation package)
+            --class  [-c] CLASSNAME  (The fully qualified main class name of your instrumentation package)
+    ```  
+
+4.  Monitor the message spewed by logcat daemon.  
+
+For the detailed deployment information, please refer to the wiki page [How to Start Instrumentation].
 
 ## **License**
 Except for the following source code:  
@@ -98,5 +156,6 @@ Note that the kit is still under construction.  Contribution and bug report is d
 [Android Studio]:http://developer.android.com/sdk/index.html
 
 [How to Develop Instrumentation Package]:https://github.com/ZSShen/ProbeDroid/wiki/How-to-Develop-Instrumentation-Package
+[How to Start Instrumentation]:https://github.com/ZSShen/ProbeDroid/wiki/How-to-Start-Instrumentation
 [JavaDoc]:http://zsshen.github.io/ProbeDroid/doc/index.html
 [Sample Tools]:https://github.com/ZSShen/ProbeDroid/tree/master/tools
