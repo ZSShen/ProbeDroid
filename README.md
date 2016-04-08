@@ -115,10 +115,9 @@ The frequently used path name identifiers:
     ```
 
 #### **5. Start Instrumentation**
-1.  Ensure that the target app is not active before starting instrumentation.  
-    For this:  
-        1. Applying `ps` command to resolve the process id of the target app.  
-        2. Applying `kill PID` command to kill the target app if it is active.  
+1.  Ensure that the target app is not active before starting instrumentation. For this:  
+    1. Applying `ps` command to resolve the process id of the target app.  
+    2. Applying `kill PID` command to kill the target app if it is active.  
 
 2.  Acquire the zygote process id by `ps` command.  
 
@@ -139,12 +138,16 @@ For the detailed deployment information, please refer to the wiki page [How to S
 ## **Demo**
 
 #### **Instrument GoogleMaps**
+**Click the picture to view the demo vedio**  
+
 | [![GoogleMaps](http://img.youtube.com/vi/6_kg-229yz4/hqdefault.jpg)](https://www.youtube.com/watch?v=6_kg-229yz4&nohtml5=False) |
 |---|
 | A simple instrumentation tool which ***tracks the strings converted from StringBuilder object***. By taking some forensics towards the converted strings, you would notice that GoogleMaps applies Java reflection to accomplish some network authentication. Also, It will dynamically generate some C/C++ code and compile it for map rendering. |
 
 
 #### **Instrument KKTix**
+**Click the picture to view the demo vedio**  
+
 | [![KKTix](http://img.youtube.com/vi/KV8gRs0xWQ8/hqdefault.jpg)](https://www.youtube.com/watch?v=KV8gRs0xWQ8) |
 |---|
 | A simple instrumentation tool which ***tracks the started Activities and Services***. By taking some forensics towards the tracked components, you would notice that KKTix applies several kinds of Activies to render the ticket booking pages. Also, it starts a  Service for background computation. |
@@ -152,7 +155,7 @@ For the detailed deployment information, please refer to the wiki page [How to S
 ## **License**
 Except for the following source code:  
 + `android/art/runtime/`, `common/log.*`, `common/stringprintf.*`, `common/utf.*`, and `common/macros.h` subtrees belong to [AOSP], which are licensed under ***Apache v2.0***.  
-+ `common/libffi/` subtree belongs to [libffi], which is licensed under ***GNU GLP v2.0***.   
++ `common/libffi/` subtree belongs to [libffi], which is licensed under ***MIT***.   
 
 All the source code are licensed under ***MIT***. See ***COPYING*** for details.  
 
