@@ -534,23 +534,24 @@ void MarshallingYard::Launch()
     // Extract the raw input arguments.
     input_marshaller_.Extract(input_type, arguments.get());
 
-    // Prepare the boxed input for the "before-method-execute" instrument callback.
-    if (BoxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
-        CAT(FATAL) << StringPrintf("Input boxing for \"before-method-execute\" "
-                                   "instrument callback.");
-
-    // Invoke the "before-method-execute" instrument callback if necessary.
     jobject bundle_java = bundle_native_->GetBundleObject();
     jmethodID meth_before_exec = bundle_native_->GetBeforeExecuteCallback();
     if (meth_before_exec) {
+        // Prepare the boxed input for the "before-method-execute" instrument callback.
+        if (BoxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
+            CAT(FATAL) << StringPrintf("Input boxing for \"before-method-execute\" "
+                                       "instrument callback.");
+
+        // Invoke the "before-method-execute" instrument callback if necessary.
         env_->CallVoidMethod(bundle_java, meth_before_exec, input_box);
         CHK_EXCP(env_, exit(EXIT_FAILURE));
+
+        // Consume the boxed input which maybe modified by "before-method-execute"
+        // instrument callback.
+        if (UnboxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
+            CAT(FATAL) << StringPrintf("Input unboxing for \"before-method-execute\" "
+                                       "instrument callback.");
     }
-    // Consume the boxed input which maybe modified by "before-method-execute"
-    // instrument callback.
-    if (UnboxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
-        CAT(FATAL) << StringPrintf("Input unboxing for \"before-method-execute\" "
-                                   "instrument callback.");
 
     // Prepare the generic argument lists for libffi to invoke the original method.
     void* receiver = input_marshaller_.GetReceiver();
@@ -569,24 +570,24 @@ void MarshallingYard::Launch()
                         bundle_native_->GetMethodName().c_str(),
                         bundle_native_->GetMethodSignature().c_str());
 
-    // Prepare the boxed output for the "after-method-execute" instrument callback.
-    jobject output_box;
-    if (BoxOutput(&output_box, result, output_type) != PROC_SUCC)
-        CAT(FATAL) << StringPrintf("Output boxing for \"after-method-execute\" "
-                                   "instrument callback.");
-
-    // Invoke the "after-method-execute" instrument callback if necessary.
     jmethodID meth_after_exec = bundle_native_->GetAfterExecuteCallback();
     if (meth_after_exec) {
+        // Prepare the boxed output for the "after-method-execute" instrument callback.
+        jobject output_box;
+        if (BoxOutput(&output_box, result, output_type) != PROC_SUCC)
+            CAT(FATAL) << StringPrintf("Output boxing for \"after-method-execute\" "
+                                       "instrument callback.");
+
+        // Invoke the "after-method-execute" instrument callback if necessary.
         env_->CallVoidMethod(bundle_java, meth_after_exec, output_box);
         CHK_EXCP(env_, exit(EXIT_FAILURE));
-    }
 
-    // Consume the boxed output which maybe modified by "after-method-execute"
-    // instrument callback.
-    if (UnboxOutput(output_box, result, output_type) != PROC_SUCC)
-        CAT(FATAL) << StringPrintf("Output unboxing for \"after-method-execute\" "
-                                   "instrument callback.");
+        // Consume the boxed output which maybe modified by "after-method-execute"
+        // instrument callback.
+        if (UnboxOutput(output_box, result, output_type) != PROC_SUCC)
+            CAT(FATAL) << StringPrintf("Output unboxing for \"after-method-execute\" "
+                                       "instrument callback.");
+    }
 
     // Inject the raw return value for caller consumption.
     output_marshaller_.Inject(output_type, result);
