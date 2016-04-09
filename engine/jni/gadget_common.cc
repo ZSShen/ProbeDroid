@@ -524,19 +524,20 @@ void MarshallingYard::Launch()
     if (gen_type.get() == nullptr)
         CAT(FATAL) << StringPrintf("Allocate buffer for libffi type array.");
 
-    std::string sig_class(kNormObject);
-    auto iter = g_map_class_cache->find(sig_class);
-    jclass clazz = iter->second->GetClass();
-    jobjectArray input_box = env_->NewObjectArray(input_count, clazz, nullptr);
-    CHK_EXCP(env_, exit(EXIT_FAILURE));
-    gc_auto_.push_back(input_box);
-
     // Extract the raw input arguments.
     input_marshaller_.Extract(input_type, arguments.get());
 
     jobject bundle_java = bundle_native_->GetBundleObject();
     jmethodID meth_before_exec = bundle_native_->GetBeforeExecuteCallback();
     if (meth_before_exec) {
+        // Allocate the object array for boxed input.
+        std::string sig_class(kNormObject);
+        auto iter = g_map_class_cache->find(sig_class);
+        jclass clazz = iter->second->GetClass();
+        jobjectArray input_box = env_->NewObjectArray(input_count, clazz, nullptr);
+        CHK_EXCP(env_, exit(EXIT_FAILURE));
+        gc_auto_.push_back(input_box);
+
         // Prepare the boxed input for the "before-method-execute" instrument callback.
         if (BoxInput(input_box, arguments.get(), input_type) != PROC_SUCC)
             CAT(FATAL) << StringPrintf("Input boxing for \"before-method-execute\" "
