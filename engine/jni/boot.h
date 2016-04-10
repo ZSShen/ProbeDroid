@@ -57,6 +57,7 @@ class Bootstrap
     static constexpr const char* kDexFileTemp = "DexFile.dex";
     static constexpr const char* kPathLibArt = "/system/lib/libart.so";
 
+    std::unique_ptr<char> output_path_;
     std::unique_ptr<char> dex_path_;
     ScopedDl handle_;
 };

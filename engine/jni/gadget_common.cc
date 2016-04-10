@@ -58,6 +58,7 @@ void* g_load_class_quick_compiled;
 // The cached class and object instance of analysis module.
 jclass g_class_analysis_main;
 jobject g_obj_analysis_main;
+jobject g_path_output_folder;
 
 // The cached class loader object and method to load the classes defined in the
 // to be instrumented APK.
@@ -157,6 +158,10 @@ void InstrumentGadgetComposer::UnregisterInstrumentGadget(int32_t signum)
     // Invoke it to let the analysis APK finalize the instrument task.
     env->CallVoidMethod(g_obj_analysis_main, meth);
     CHK_EXCP(env, exit(EXIT_FAILURE));
+
+    env->DeleteGlobalRef(g_class_analysis_main);
+    env->DeleteGlobalRef(g_obj_analysis_main);
+    env->DeleteGlobalRef(g_path_output_folder);
 
     exit(EXIT_SUCCESS);
 }

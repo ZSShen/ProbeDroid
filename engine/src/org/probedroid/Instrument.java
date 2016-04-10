@@ -57,6 +57,8 @@ import org.probedroid.support.MethodBundle;
  */
 public abstract class Instrument {
 
+    public static String mPathOutputDirectory;
+
     /**
      * @hide
      */

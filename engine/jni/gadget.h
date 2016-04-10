@@ -350,6 +350,7 @@ extern void* g_load_class_quick_compiled;
 // The cached class and object instance of analysis module.
 extern jclass g_class_analysis_main;
 extern jobject g_obj_analysis_main;
+extern jobject g_path_output_folder;
 
 // The cached class loader object and method to load the classes defined in the
 // to be instrumented APK.

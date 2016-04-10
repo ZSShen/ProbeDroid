@@ -118,14 +118,25 @@ bool Bootstrap::CraftDexPrivatePath()
     std::ifstream map(buf, std::ifstream::in);
     if (map.good() && !map.eof()) {
         map.getline(buf, kBlahSizeMid);
-        size_t len = 2 * (1 + strlen(kDirDexData)) + (1 + strlen(buf)) +
-                     (1 + strlen(kDirInstrument)) + 1;
-        char* path = new(std::nothrow) char[len];
-        if (!path)
+
+        size_t len_output = 2 * (1 + strlen(kDirDexData)) + (1 + strlen(buf)) + 1;
+        char* path_output = new(std::nothrow) char[len_output];
+        if (!path_output)
             return PROC_FAIL;
-        snprintf(path, len, "/%s/%s/%s/%s", kDirDexData, kDirDexData, buf,
+
+        // The default file output path for the analysis module.
+        size_t len_dex = len_output + (1 + strlen(kDirInstrument));
+        char* path_dex = new(std::nothrow) char[len_dex];
+        if (!path_dex)
+            return PROC_FAIL;
+
+        // The path to store the compiled analysis module.
+        snprintf(path_output, len_output, "/%s/%s/%s", kDirDexData, kDirDexData, buf);
+        snprintf(path_dex, len_dex, "/%s/%s/%s/%s", kDirDexData, kDirDexData, buf,
                  kDirInstrument);
-        dex_path_.reset(path);
+
+        output_path_.reset(path_output);
+        dex_path_.reset(path_dex);
         return PROC_SUCC;
     }
     return PROC_FAIL;
@@ -284,6 +295,23 @@ bool Bootstrap::LoadAnalysisModule()
                                         "instantiated main class.");
             return PROC_FAIL;
         }
+
+        // Set the default output folder path to the main instrumentation class.
+        jclass clazz_instrument = env->FindClass(kNormInstrument);
+        CHK_EXCP_AND_RET_FAIL(env);
+        jfieldID field_path = env->GetStaticFieldID(clazz_instrument,
+                                        kFieldPathOutputDirectory, kSigString);
+        CHK_EXCP_AND_RET_FAIL(env);
+
+        jstring path_out = env->NewStringUTF(output_path_.get());
+        CHK_EXCP_AND_RET_FAIL(env);
+        g_path_output_folder = env->NewGlobalRef(path_out);
+        if (!g_path_output_folder) {
+            CAT(ERROR) << StringPrintf("Allocate a global reference for the "
+                                       "default output folder pathname.");
+            return PROC_FAIL;
+        }
+        env->SetStaticObjectField(clazz_instrument, field_path, g_path_output_folder);
     }
 
     // Resolve "void DexFile.close()".

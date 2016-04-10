@@ -122,6 +122,7 @@ static const char* kFuncAfterMethodExecute = "afterMethodExecute";
 
 static const char* kFieldInterceptBefore = "mInterceptBefore";
 static const char* kFieldInterceptAfter = "mInterceptAfter";
+static const char* kFieldPathOutputDirectory = "mPathOutputDirectory";
 
 // Cache some critical C++ function signatures exported from libart.
 static const char* kIndirectReferneceTableAdd =
