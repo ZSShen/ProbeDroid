@@ -31,6 +31,7 @@
 #include <unordered_map>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <jni.h>
 
 #include "signature.h"
@@ -266,7 +267,7 @@ class MarshallingYard
     bool UnboxInput(jobjectArray, void**, const std::vector<char>&);
     bool BoxOutput(jobject*, void**, char);
     bool UnboxOutput(jobject, void**, char);
-    bool EncapsulateObject(char, bool, void***, jobject*);
+    bool EncapsulateObject(char, void***, jobject*);
     bool DecapsulateObject(char, bool, void***, jobject);
 
     void MakeGenericInput(void**, const std::vector<char>&,
@@ -354,6 +355,9 @@ extern jobject g_obj_analysis_main;
 // to be instrumented APK.
 extern jobject g_ref_class_loader;
 extern jmethodID g_meth_load_class;
+
+// The reentrant counter to avoid hook loop.
+extern thread_local uint32_t g_entrant_count;
 
 // The global map to maintain the information about all the instrumented methods
 // of the target app.
