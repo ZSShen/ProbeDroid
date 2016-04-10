@@ -57,6 +57,15 @@ import org.probedroid.support.MethodBundle;
  */
 public abstract class Instrument {
 
+    /**
+     * The default file output directory for analysts to dump their profiled
+     * data. <b><i> Do not modify this field! </i></b>
+     *
+     * <pre class="prettyprint">
+     * // Generate the file output path.
+     * File output = new File(mPathOutputDirectory, &quot;MyDump.txt&quot;);
+     * </pre>
+     */
     public static String mPathOutputDirectory;
 
     /**
