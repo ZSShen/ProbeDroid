@@ -124,7 +124,7 @@ bool Bootstrap::CraftDexPrivatePath()
         if (!path_output)
             return PROC_FAIL;
 
-        // The default file output path for the analysis module.
+        // The default file output directory for the analysis module.
         size_t len_dex = len_output + (1 + strlen(kDirInstrument));
         char* path_dex = new(std::nothrow) char[len_dex];
         if (!path_dex)

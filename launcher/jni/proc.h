@@ -77,8 +77,12 @@ class EggHunter
     void Hunt(pid_t, const char*, const char*, const char*, const char*);
 
   private:
+    bool Initialize(const char*);
     bool CaptureApp(pid_t, const char*);
     bool InjectApp(const char*, const char*, const char*);
+
+    bool ExecutePs(const char*, pid_t*);
+    bool ExecuteKill(pid_t);
     void WaitForForkEvent(pid_t);
     void CheckStartupCmd(const char*);
     bool PokeTextInApp(uintptr_t, const char*, size_t);

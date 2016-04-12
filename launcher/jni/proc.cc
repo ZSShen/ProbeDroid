@@ -49,6 +49,12 @@ static const char* kFuncDlopen = "dlopen";
 static const char* kFuncMmap = "mmap";
 
 
+#define LOG_SYSERR_AND_RETURN()                                                \
+        do {                                                                   \
+            PLOG(ERROR);                                                       \
+            return PROC_FAIL;                                                  \
+        } while (0);
+
 #define LOG_SYSERR_AND_THROW()                                                 \
         do {                                                                   \
             PLOG(ERROR);                                                       \
@@ -121,6 +127,42 @@ bool FunctionTable::Resolve(pid_t pid_me, pid_t pid_him)
 
     dlopen_ = addr_linker_him + (addr_dlopen_me - addr_linker_me);
     mmap_ = addr_libc_him + (addr_mmap_me - addr_libc_me);
+    return PROC_SUCC;
+}
+
+bool EggHunter::ExecutePs(const char* app_name, pid_t* p_pid)
+{
+    FILE* cmd = popen("ps", "r");
+    if (!cmd)
+        LOG_SYSERR_AND_RETURN();
+
+    char buf[kBlahSizeMid];
+    while (fgets(buf, kBlahSizeMid, cmd)) {
+        if (!strstr(buf, app_name))
+            continue;
+        char* token = strtok(buf, " ");
+        token = strtok(nullptr, " ");
+        *p_pid = atoi(token);
+    }
+
+    if (pclose(cmd) == -1)
+        LOG_SYSERR_AND_RETURN();
+
+    return PROC_SUCC;
+}
+
+bool EggHunter::ExecuteKill(pid_t pid)
+{
+    char buf[kBlahSizeTiny];
+    snprintf(buf, kBlahSizeTiny, "kill %d", pid);
+
+    FILE* cmd = popen(buf, "r");
+    if (!cmd)
+        LOG_SYSERR_AND_RETURN();
+
+    if (pclose(cmd) == -1)
+        LOG_SYSERR_AND_RETURN();
+
     return PROC_SUCC;
 }
 
@@ -197,6 +239,22 @@ bool EggHunter::PeekTextInApp(uintptr_t addr_txt, char* buf, size_t count_byte)
         count_read += sizeof(word);
         slide[idx++] = word;
     }
+    return PROC_SUCC;
+}
+
+bool EggHunter::Initialize(const char* app_name)
+{
+    pid_t pid;
+
+    // Before instrumentation, kill the target app if it is still active now.
+    pid = -1;
+    if (ExecutePs(app_name, &pid) == PROC_FAIL)
+        return PROC_FAIL;
+    if (pid != -1) {
+        if (ExecuteKill(pid) == PROC_FAIL)
+            return PROC_FAIL;
+    }
+
     return PROC_SUCC;
 }
 
@@ -382,6 +440,8 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
 void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_path,
                      const char* module_path, const char* class_name)
 {
+    if (Initialize(app_name) != PROC_SUCC)
+        return;
     if (CaptureApp(pid_zygote, app_name) != PROC_SUCC)
         return;
     if (InjectApp(lib_path, module_path, class_name) != PROC_SUCC)
