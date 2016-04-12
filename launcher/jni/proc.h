@@ -78,7 +78,7 @@ class EggHunter
 
   private:
     bool Initialize(const char*);
-    bool CaptureApp(pid_t, const char*);
+    bool CaptureApp(const char*);
     bool InjectApp(const char*, const char*, const char*);
 
     bool ExecutePs(const char*, pid_t*);
@@ -88,7 +88,7 @@ class EggHunter
     bool PokeTextInApp(uintptr_t, const char*, size_t);
     bool PeekTextInApp(uintptr_t, char*, size_t);
 
-    pid_t pid_app_;
+    pid_t pid_zygote_, pid_app_;
     FunctionTable func_tbl_;
 };
 

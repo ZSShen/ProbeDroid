@@ -42,6 +42,7 @@
 
 namespace proc {
 
+static const char* kProcZygote = "zygote";
 static const char* kPathLinker = "/system/bin/linker";
 static const char* kPathLibc = "/system/lib/libc.so";
 static const char* kNameLinker = "libdl.so";
@@ -246,6 +247,14 @@ bool EggHunter::Initialize(const char* app_name)
 {
     pid_t pid;
 
+    // Capture the zygote pid.
+    pid = -1;
+    if (ExecutePs(kProcZygote, &pid) == PROC_FAIL)
+        return PROC_FAIL;
+    if (pid == -1)
+        return PROC_FAIL;
+    pid_zygote_ = pid;
+
     // Before instrumentation, kill the target app if it is still active now.
     pid = -1;
     if (ExecutePs(app_name, &pid) == PROC_FAIL)
@@ -258,30 +267,30 @@ bool EggHunter::Initialize(const char* app_name)
     return PROC_SUCC;
 }
 
-bool EggHunter::CaptureApp(pid_t pid_zygote, const char* app_name)
+bool EggHunter::CaptureApp(const char* app_name)
 {
     bool rtn = PROC_SUCC;
     try {
         // First, we need to attach to the zygote process and wait for the
         // target app to be forked after our triggering.
-        if (ptrace(PTRACE_ATTACH, pid_zygote, nullptr, nullptr) == -1)
+        if (ptrace(PTRACE_ATTACH, pid_zygote_, nullptr, nullptr) == -1)
             LOG_SYSERR_AND_THROW()
 
         int status;
-        if (waitpid(pid_zygote, &status, WUNTRACED) != pid_zygote)
+        if (waitpid(pid_zygote_, &status, WUNTRACED) != pid_zygote_)
             LOG_SYSERR_AND_THROW()
 
-        if (ptrace(PTRACE_SETOPTIONS, pid_zygote, 1, PTRACE_O_TRACEFORK) == -1)
+        if (ptrace(PTRACE_SETOPTIONS, pid_zygote_, 1, PTRACE_O_TRACEFORK) == -1)
             LOG_SYSERR_AND_THROW()
 
-        if (ptrace(PTRACE_CONT, pid_zygote, nullptr, nullptr) == -1)
+        if (ptrace(PTRACE_CONT, pid_zygote_, nullptr, nullptr) == -1)
             LOG_SYSERR_AND_THROW()
 
         // Second, we enter the polling loop to wait for the target app. When
         // we catch the fork event fired by zygote, we should verify if the
         // newly forked app is our target by examining the startup command. If
         // so, we PROC_SUCCfully get the goal and should release zygote.
-        WaitForForkEvent(pid_zygote);
+        WaitForForkEvent(pid_zygote_);
         CheckStartupCmd(app_name);
     } catch (BadProbe& e) {
         rtn = PROC_FAIL;
@@ -289,7 +298,7 @@ bool EggHunter::CaptureApp(pid_t pid_zygote, const char* app_name)
             ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
     }
 
-    ptrace(PTRACE_DETACH, pid_zygote, nullptr, nullptr);
+    ptrace(PTRACE_DETACH, pid_zygote_, nullptr, nullptr);
     return rtn;
 }
 
@@ -442,7 +451,7 @@ void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_pat
 {
     if (Initialize(app_name) != PROC_SUCC)
         return;
-    if (CaptureApp(pid_zygote, app_name) != PROC_SUCC)
+    if (CaptureApp(app_name) != PROC_SUCC)
         return;
     if (InjectApp(lib_path, module_path, class_name) != PROC_SUCC)
         return;
