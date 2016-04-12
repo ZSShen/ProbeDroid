@@ -77,16 +77,21 @@ class EggHunter
     void Hunt(const char*, const char*, const char*, const char*);
 
   private:
+    // Routines to resolve zygote pid and clean the target app.
     bool Initialize(const char*);
-    bool CaptureApp(const char*);
-    bool InjectApp(const char*, const char*, const char*);
-
     bool ExecutePs(const char*, pid_t*);
     bool ExecuteKill(pid_t);
-    void WaitForForkEvent(pid_t);
-    void CheckStartupCmd(const char*);
-    bool PokeTextInApp(uintptr_t, const char*, size_t);
-    bool PeekTextInApp(uintptr_t, char*, size_t);
+
+    // Routines to trace zygote and catch the newly forked target app.
+    bool CaptureApp(const char*);
+    bool WaitForForkEvent(pid_t);
+    bool CheckStartupCmd(const char*);
+
+    // Routines to inject "libProbeDroid.so" to the target app.
+    bool InjectApp(const char*, const char*, const char*);
+    bool RemoteMethodCall(struct user_regs_struct*, long*, size_t);
+    bool PokeText(uintptr_t, const char*, size_t);
+    bool PeekText(uintptr_t, char*, size_t);
 
     pid_t pid_zygote_, pid_app_;
     FunctionTable func_tbl_;

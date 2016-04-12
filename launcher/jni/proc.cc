@@ -50,16 +50,13 @@ static const char* kFuncDlopen = "dlopen";
 static const char* kFuncMmap = "mmap";
 
 
-#define LOG_SYSERR_AND_RETURN()                                                \
-        do {                                                                   \
-            PLOG(ERROR);                                                       \
-            return PROC_FAIL;                                                  \
-        } while (0);
+#define SYSERR PLOG(ERROR)
 
-#define LOG_SYSERR_AND_THROW()                                                 \
+#define FINAL(label, ...)                                                      \
         do {                                                                   \
-            PLOG(ERROR);                                                       \
-            throw BadProbe();                                                  \
+            __VA_ARGS__;                                                       \
+            rtn = PROC_FAIL;                                                   \
+            goto label;                                                        \
         } while (0);
 
 
@@ -133,9 +130,11 @@ bool FunctionTable::Resolve(pid_t pid_me, pid_t pid_him)
 
 bool EggHunter::ExecutePs(const char* app_name, pid_t* p_pid)
 {
+    bool rtn = PROC_SUCC;
+
     FILE* cmd = popen("ps", "r");
     if (!cmd)
-        LOG_SYSERR_AND_RETURN();
+        FINAL(EXIT, SYSERR);
 
     char buf[kBlahSizeMid];
     while (fgets(buf, kBlahSizeMid, cmd)) {
@@ -147,61 +146,71 @@ bool EggHunter::ExecutePs(const char* app_name, pid_t* p_pid)
     }
 
     if (pclose(cmd) == -1)
-        LOG_SYSERR_AND_RETURN();
-
-    return PROC_SUCC;
+        FINAL(EXIT, SYSERR);
+EXIT:
+    return rtn;
 }
 
 bool EggHunter::ExecuteKill(pid_t pid)
 {
+    bool rtn = PROC_SUCC;
+
     char buf[kBlahSizeTiny];
     snprintf(buf, kBlahSizeTiny, "kill %d", pid);
 
     FILE* cmd = popen(buf, "r");
     if (!cmd)
-        LOG_SYSERR_AND_RETURN();
+        FINAL(EXIT, SYSERR);
 
     if (pclose(cmd) == -1)
-        LOG_SYSERR_AND_RETURN();
-
-    return PROC_SUCC;
+        FINAL(EXIT, SYSERR);
+EXIT:
+    return rtn;
 }
 
-void EggHunter::WaitForForkEvent(pid_t pid)
+bool EggHunter::WaitForForkEvent(pid_t pid)
 {
+    bool rtn = PROC_SUCC;
+
     while (true) {
         int status;
         if (waitpid(pid, &status, __WALL) != pid)
-            LOG_SYSERR_AND_THROW()
+            FINAL(EXIT, SYSERR);
 
         if ((status >> 8) == (SIGTRAP | PTRACE_EVENT_FORK << 8)) {
             // Capture the fork event and record the app PID.
             if (ptrace(PTRACE_GETEVENTMSG, pid, nullptr, &pid_app_) == -1)
-                LOG_SYSERR_AND_THROW()
+                FINAL(EXIT, SYSERR);
 
             if (ptrace(PTRACE_CONT, pid, nullptr, nullptr) == -1)
-                LOG_SYSERR_AND_THROW()
+                FINAL(EXIT, SYSERR);
 
             if (waitpid(pid_app_, &status, __WALL) != pid_app_)
-                LOG_SYSERR_AND_THROW()
+                FINAL(EXIT, SYSERR);
             break;
         }
     }
+
+EXIT:
+    return rtn;
 }
 
-void EggHunter::CheckStartupCmd(const char* app_name)
+bool EggHunter::CheckStartupCmd(const char* app_name)
 {
+    bool rtn = PROC_SUCC;
+
     // Wait for the new process to finish app initialization.
     while (true) {
         // Force the newly forked process to stop at each system call entry or
-        // the code points just after system call. So that we can capture the
-        // timing about finishing initialization.
+        // the code point just after system call. So that we can capture the
+        // timing when ActivityThread invokes "Process.setArgV0(data.processName)"
+        // and completes the task to set process's argv[0] parameter.
         if (ptrace(PTRACE_SYSCALL, pid_app_, nullptr, nullptr) == -1)
-            LOG_SYSERR_AND_THROW()
+            FINAL(EXIT, SYSERR);
 
         int status;
         if (waitpid(pid_app_, &status, __WALL) != pid_app_)
-            LOG_SYSERR_AND_THROW()
+            FINAL(EXIT, SYSERR);
 
         char buf[kBlahSizeMid];
         sprintf(buf, "/proc/%d/cmdline", pid_app_);
@@ -214,9 +223,35 @@ void EggHunter::CheckStartupCmd(const char* app_name)
             break;
         }
     }
+
+EXIT:
+    return rtn;
 }
 
-bool EggHunter::PokeTextInApp(uintptr_t addr_txt, const char* buf, size_t count_byte)
+bool EggHunter::RemoteMethodCall(struct user_regs_struct* reg, long* stack,
+                                 size_t count_byte)
+{
+    bool rtn = PROC_SUCC;
+
+    if (PokeText(reg->esp, reinterpret_cast<char*>(stack), count_byte) != PROC_SUCC)
+        FINAL(EXIT, SYSERR);
+
+    if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, reg) == -1)
+        FINAL(EXIT, SYSERR);
+
+    if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
+        FINAL(EXIT, SYSERR);
+
+    // we should receive a SIGSEGV triggered by the target app due to
+    // the invalid return address.
+    int status;
+    if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
+        FINAL(EXIT, SYSERR);
+EXIT:
+    return rtn;
+}
+
+bool EggHunter::PokeText(uintptr_t addr_txt, const char* buf, size_t count_byte)
 {
     size_t count_wrt = 0;
     while (count_wrt < count_byte) {
@@ -229,7 +264,7 @@ bool EggHunter::PokeTextInApp(uintptr_t addr_txt, const char* buf, size_t count_
     return PROC_SUCC;
 }
 
-bool EggHunter::PeekTextInApp(uintptr_t addr_txt, char* buf, size_t count_byte)
+bool EggHunter::PeekText(uintptr_t addr_txt, char* buf, size_t count_byte)
 {
     long* slide = reinterpret_cast<long*>(buf);
     size_t count_read = 0, idx = 0;
@@ -245,10 +280,8 @@ bool EggHunter::PeekTextInApp(uintptr_t addr_txt, char* buf, size_t count_byte)
 
 bool EggHunter::Initialize(const char* app_name)
 {
-    pid_t pid;
-
     // Capture the zygote pid.
-    pid = -1;
+    pid_t pid = -1;
     if (ExecutePs(kProcZygote, &pid) == PROC_FAIL)
         return PROC_FAIL;
     if (pid == -1)
@@ -270,33 +303,31 @@ bool EggHunter::Initialize(const char* app_name)
 bool EggHunter::CaptureApp(const char* app_name)
 {
     bool rtn = PROC_SUCC;
-    try {
-        // First, we need to attach to the zygote process and wait for the
-        // target app to be forked after our triggering.
-        if (ptrace(PTRACE_ATTACH, pid_zygote_, nullptr, nullptr) == -1)
-            LOG_SYSERR_AND_THROW()
 
-        int status;
-        if (waitpid(pid_zygote_, &status, WUNTRACED) != pid_zygote_)
-            LOG_SYSERR_AND_THROW()
+    // Firstly, we need to attach to the zygote process and wait for the
+    // target app to be forked.
+    if (ptrace(PTRACE_ATTACH, pid_zygote_, nullptr, nullptr) == -1)
+        FINAL(EXIT, SYSERR);
 
-        if (ptrace(PTRACE_SETOPTIONS, pid_zygote_, 1, PTRACE_O_TRACEFORK) == -1)
-            LOG_SYSERR_AND_THROW()
+    int status;
+    if (waitpid(pid_zygote_, &status, WUNTRACED) != pid_zygote_)
+        FINAL(EXIT, SYSERR);
 
-        if (ptrace(PTRACE_CONT, pid_zygote_, nullptr, nullptr) == -1)
-            LOG_SYSERR_AND_THROW()
+    if (ptrace(PTRACE_SETOPTIONS, pid_zygote_, 1, PTRACE_O_TRACEFORK) == -1)
+        FINAL(EXIT, SYSERR);
 
-        // Second, we enter the polling loop to wait for the target app. When
-        // we catch the fork event fired by zygote, we should verify if the
-        // newly forked app is our target by examining the startup command. If
-        // so, we PROC_SUCCfully get the goal and should release zygote.
-        WaitForForkEvent(pid_zygote_);
-        CheckStartupCmd(app_name);
-    } catch (BadProbe& e) {
-        rtn = PROC_FAIL;
-        if (pid_app_ != 0)
-            ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
-    }
+    if (ptrace(PTRACE_CONT, pid_zygote_, nullptr, nullptr) == -1)
+        FINAL(EXIT, SYSERR);
+
+    // Secondly, we enter the polling loop to wait for the target app. When
+    // we catch the fork event fired by zygote, we should verify if the
+    // newly forked app is our target by examining the startup command. If
+    // so, we get the goal and should release zygote.
+    rtn = WaitForForkEvent(pid_zygote_) && CheckStartupCmd(app_name);
+
+EXIT:
+    if ((rtn == PROC_FAIL) && (pid_app_ != 0))
+        ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
 
     ptrace(PTRACE_DETACH, pid_zygote_, nullptr, nullptr);
     return rtn;
@@ -310,9 +341,8 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
     if (func_tbl_.Resolve(pid_inject, pid_app_) != PROC_SUCC)
         return PROC_FAIL;
 
-    // Prepare the library pathname for dlopen() and the key-value pairs for
-    // inter-process communication. Zero padding is necessary to produce the
-    // text word recognized by ptrace().
+    // Prepare the key-value pairs for inter-process communication. Zero padding
+    // is necessary to produce the text word recognized by ptrace().
     char payload[kBlahSizeMid];
     size_t len_payload = strlen(lib_path);
     strncpy(payload, lib_path, kBlahSizeMid);
@@ -343,105 +373,77 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
     uintptr_t addr_dlopen = func_tbl_.GetDlopen();
 
     bool rtn = PROC_SUCC;
-    try {
-        // Backup the context of the target app.
-        struct user_regs_struct reg_orig;
-        if (ptrace(PTRACE_GETREGS, pid_app_, nullptr, &reg_orig) == -1)
-            LOG_SYSERR_AND_THROW();
+    size_t count_byte;
+    uintptr_t addr_blk;
 
-        // Firstly, we force the target app to execute mmap(). The allocated
-        // block will be stuffed with the pathname of the hooking library.
-        // Note, to fit the calling convention,
-        // param[0] stores the return address, and
-        // param[6] to param[1] is the actual parameters of mmap().
-        long param[kBlahSizeMid];
-        param[0] = 0;
-        param[1] = 0;
-        param[2] = kPageSize;
-        param[3] = PROT_READ | PROT_WRITE | PROT_EXEC;
-        param[4] = MAP_ANONYMOUS | MAP_PRIVATE;
-        param[5] = 0;
-        param[6] = 0;
-        size_t count_byte = sizeof(long) * 7;
+    // Backup the context of the target app.
+    struct user_regs_struct reg_orig;
+    if (ptrace(PTRACE_GETREGS, pid_app_, nullptr, &reg_orig) == -1)
+        FINAL(EXIT, SYSERR);
+    struct user_regs_struct reg_modi;
+    memcpy(&reg_modi, &reg_orig, sizeof(struct user_regs_struct));
 
-        struct user_regs_struct reg_modi;
-        memcpy(&reg_modi, &reg_orig, sizeof(struct user_regs_struct));
-        reg_modi.eip = addr_mmap;
-        reg_modi.esp -= count_byte;
+    // Firstly, we force the target app to execute mmap(). The allocated
+    // block will be stuffed with the path name of "libProbeDroid.so".
+    // Note, to fit the calling convention,
+    // param[0] stores the return address, and
+    // param[6] to param[1] is the actual parameters of mmap().
+    long param[kBlahSizeMid];
+    param[0] = 0;
+    param[1] = 0;
+    param[2] = kPageSize;
+    param[3] = PROT_READ | PROT_WRITE | PROT_EXEC;
+    param[4] = MAP_ANONYMOUS | MAP_PRIVATE;
+    param[5] = 0;
+    param[6] = 0;
+    count_byte = sizeof(long) * 7;
 
-        if (PokeTextInApp(reg_modi.esp, reinterpret_cast<char*>(param),
-                          count_byte) != PROC_SUCC)
-            LOG_SYSERR_AND_THROW()
+    // Set the program counter and stack pointer.
+    reg_modi.eip = addr_mmap;
+    reg_modi.esp -= count_byte;
+    if (RemoteMethodCall(&reg_modi, param, count_byte) == PROC_FAIL)
+        FINAL(EXIT);
 
-        if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_modi) == -1)
-            LOG_SYSERR_AND_THROW()
+    // Stuff the path name of "libProbeDroid.so" into the newly mapped space.
+    if (ptrace(PTRACE_GETREGS, pid_app_, nullptr, &reg_modi) == -1)
+        FINAL(EXIT, SYSERR);
 
-        if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
-            LOG_SYSERR_AND_THROW()
+    addr_blk = reg_modi.eax;
+    #if __WORDSIZE == 64
+    TIP() << StringPrintf("[+] mmap() successes with 0x%016lx returned.\n", addr_blk);
+    #else
+    TIP() << StringPrintf("[+] mmap() successes with 0x%08x returned.\n", addr_blk);
+    #endif
 
-        // The injector will receive a SIGSEGV triggered by the target app due to
-        // the invalid return address.
-        int status;
-        if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
-            LOG_SYSERR_AND_THROW()
+    if (PokeText(addr_blk, payload, len_payload) == -1)
+        FINAL(EXIT, SYSERR);
 
-        // Stuff the pathname of the hooking library into the newly mapped
-        // memory segment.
-        if (ptrace(PTRACE_GETREGS, pid_app_, nullptr, &reg_modi) == -1)
-            LOG_SYSERR_AND_THROW()
+    // Secondly, we force the target app to execute dlopen().
+    // Then "libProbeDroid.so" will be loaded by it.
+    // Note, to fit the calling convention,
+    // param[0] stores the return address, and
+    // param[2] to param[1] is the actual parameters of dlopen().
+    param[0] = 0;
+    param[1] = addr_blk;
+    param[2] = RTLD_NOW;
+    count_byte = sizeof(long) * 3;
 
-        uintptr_t addr_blk = reg_modi.eax;
-        #if __WORDSIZE == 64
-        TIP() << StringPrintf("[+] mmap() successes with 0x%016lx returned.\n", addr_blk);
-        #else
-        TIP() << StringPrintf("[+] mmap() successes with 0x%08x returned.\n", addr_blk);
-        #endif
+    // Set the program counter and stack pointer.
+    reg_modi.eip = addr_dlopen;
+    reg_modi.esp -= count_byte;
+    if (RemoteMethodCall(&reg_modi, param, count_byte) == PROC_FAIL)
+        FINAL(EXIT);
+    TIP() << StringPrintf("[+] dlopen() successes.\n");
 
-        if (PokeTextInApp(addr_blk, payload, len_payload) == -1)
-            LOG_SYSERR_AND_THROW()
+    // At this stage, we finish the library injection and should restore
+    // the context of the target app.
+    if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_orig) == -1)
+        FINAL(EXIT, SYSERR);
 
-        // Secondly, we force the target app to execute dlopen(). Then our hooking
-        // library will be loaded by target.
-        // Note, to fit the calling convention,
-        // param[0] stores the return address, and
-        // param[2] to param[1] is the actual parameters of dlopen().
-        param[0] = 0;
-        param[1] = addr_blk;
-        param[2] = RTLD_NOW;
-        count_byte = sizeof(long) * 3;
+    if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
+        FINAL(EXIT, SYSERR);
 
-        reg_modi.eip = addr_dlopen;
-        reg_modi.esp -= count_byte;
-
-        if (PokeTextInApp(reg_modi.esp, reinterpret_cast<char*>(param),
-                          count_byte) != PROC_SUCC)
-            LOG_SYSERR_AND_THROW()
-
-        if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_modi) == -1)
-            LOG_SYSERR_AND_THROW()
-
-        if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
-            LOG_SYSERR_AND_THROW()
-
-        // The injector will receive a SIGSEGV triggered by target app due to
-        // invalid return address.
-        if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
-            LOG_SYSERR_AND_THROW()
-        TIP() << StringPrintf("[+] dlopen() successes.\n");
-
-        // At this stage, we finish the library injection and should restore
-        // the context of the target app.
-        if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_orig) == -1)
-            LOG_SYSERR_AND_THROW()
-
-        if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
-            LOG_SYSERR_AND_THROW()
-    } catch (BadProbe& e) {
-        rtn = PROC_FAIL;
-        if (pid_app_ != 0)
-            ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
-    }
-
+EXIT:
     ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
     return rtn;
 }
