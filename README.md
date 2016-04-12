@@ -115,23 +115,16 @@ The frequently used path name identifiers:
     ```
 
 #### **5. Start Instrumentation**
-1.  Ensure that the target app is not active before starting instrumentation. For this:  
-    1. Applying `ps` command to resolve the process id of the target app.  
-    2. Applying `kill PID` command to kill the target app if it is active.  
-
-2.  Acquire the zygote process id by `ps` command.  
-
-3.  Run the ProbeDroid launcher.  
+1.  Run the ProbeDroid launcher.  
     ```
         Usage: ./launcher
-            --zygote [-z] PID        (The zygote process id)
-            --app    [-a] APPNAME    (The package name of the target app)
-            --lib    [-l] LIBPATH    (The path name of libProbeDroid.so)
-            --module [-m] MODULEPATH (The path name of your instrumentation package)
-            --class  [-c] CLASSNAME  (The fully qualified main class name of your instrumentation package)
+            --app    [-a] APPNAME    (The package name (or keyword) of the target app)
+            --lib    [-l] LIBPATH    (The *absolute path name* of libProbeDroid.so)
+            --module [-m] MODULEPATH (The *absolute path name* of your instrumentation package)
+            --class  [-c] CLASSNAME  (The *fully qualified main class name* of your instrumentation package)
     ```  
 
-4.  Monitor the message spewed by logcat daemon.  
+2.  Monitor the message spewed by logcat daemon.  
 
 For the detailed deployment information, please refer to the wiki page [How to Start Instrumentation].
 
