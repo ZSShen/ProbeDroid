@@ -446,7 +446,7 @@ bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
     return rtn;
 }
 
-void EggHunter::Hunt(pid_t pid_zygote, const char* app_name, const char* lib_path,
+void EggHunter::Hunt(const char* app_name, const char* lib_path,
                      const char* module_path, const char* class_name)
 {
     if (Initialize(app_name) != PROC_SUCC)

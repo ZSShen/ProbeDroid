@@ -74,7 +74,7 @@ class EggHunter
     ~EggHunter()
     {}
 
-    void Hunt(pid_t, const char*, const char*, const char*, const char*);
+    void Hunt(const char*, const char*, const char*, const char*);
 
   private:
     bool Initialize(const char*);
