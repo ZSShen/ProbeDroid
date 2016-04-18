@@ -323,7 +323,9 @@ bool EggHunter::CaptureApp(const char* app_name)
     // we catch the fork event fired by zygote, we should verify if the
     // newly forked app is our target by examining the startup command. If
     // so, we get the goal and should release zygote.
-    rtn = WaitForForkEvent(pid_zygote_) && CheckStartupCmd(app_name);
+    if (WaitForForkEvent(pid_zygote_) == PROC_FAIL)
+        FINAL(EXIT);
+    rtn = CheckStartupCmd(app_name);
 
 EXIT:
     if ((rtn == PROC_FAIL) && (pid_app_ != 0))
