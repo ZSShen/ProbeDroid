@@ -40,29 +40,29 @@ JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
   (JNIEnv *env, jobject thiz, jboolean is_static, jstring name_class,
    jstring name_method, jstring signature_method, jobject bundle)
 {
+    // Since our gadgets are dynamically injected, there is no corresponding
+    // ArtMethod information. If the successive JNI calls try to throw exception
+    // or to generate exception object, Android Runtime will try to build the
+    // stack trace which will trigger the unchecked NULL ArtMethod error. This is
+    // natural, because Android Runtime does not expect such "unrecorded methods".
+    // To solve the issue, we must silence the stack trace.
+    CloseRuntimeStackTrace();
+
     if (env->IsSameObject(name_class, nullptr) == JNI_TRUE ||
         env->IsSameObject(name_method, nullptr) == JNI_TRUE ||
         env->IsSameObject(signature_method, nullptr) == JNI_TRUE ||
         env->IsSameObject(bundle, nullptr) == JNI_TRUE)
-        ;
-    //CHK_EXCP_AND_RET_FAIL(env, RETHROW(kNormIllegalArgument));
+        return org_probedroid_Instrument_ERR_EMPTY_STRING;
+
+    if (env->GetStringLength(name_class) == 0 ||
+        env->GetStringLength(name_method) == 0 ||
+        env->GetStringLength(signature_method) == 0)
+        return org_probedroid_Instrument_ERR_EMPTY_STRING;
 
     jboolean is_copy = JNI_FALSE;
     const char* cstr_class_name = env->GetStringUTFChars(name_class, &is_copy);
     const char* cstr_method_name = env->GetStringUTFChars(name_method, &is_copy);
     const char* cstr_method_sig = env->GetStringUTFChars(signature_method, &is_copy);
-    if (!cstr_class_name || !cstr_method_name || !cstr_method_sig) {
-        //jthrowable except;
-        //RETHROW(kNormIllegalArgument);
-    }
-
-    // Since our gadgets are dynamically injected, there is no corresponding
-    // ArtMethod information. If the successive JNI call throws exception,
-    // Android Runtime will try to build the stack trace which will trigger the
-    // unchecked NULL ArtMethod error. This is natural, because Android Runtime
-    // does not expect such "unrecorded methods". To solve the issue, we must
-    // silence the stack trace.
-    CloseRuntimeStackTrace();
 
     // Remember that we are in ClassLoader.loadClass() called by ActivityThread
     // to load the android.app.Application class. And we just slickly use that
@@ -123,9 +123,11 @@ JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
 
     snprintf(sig, kBlahSizeMid, "%c", kSigBoolean);
     jfieldID fld_before = env->GetFieldID(clazz_bundle, kFieldInterceptBefore, sig);
-    //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+    if (!fld_before)
+        return org_probedroid_Instrument_ERR_ABNORMAL_BUNDLE;
     jfieldID fld_after = env->GetFieldID(clazz_bundle, kFieldInterceptAfter, sig);
-    //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+    if (!fld_after)
+        return org_probedroid_Instrument_ERR_ABNORMAL_BUNDLE;
 
     jboolean before = env->GetBooleanField(bundle, fld_before);
     jboolean after = env->GetBooleanField(bundle, fld_after);
@@ -135,12 +137,14 @@ JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     if (before) {
         snprintf(sig, kBlahSizeMid, "(%c%s)%c", kSigArray, kSigObjectObject, kSigVoid);
         meth_before = env->GetMethodID(clazz_bundle, kFuncBeforeMethodExecute, sig);
-        //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+        if (!meth_before)
+            return org_probedroid_Instrument_ERR_ABNORMAL_BUNDLE;
     }
     if (after) {
         snprintf(sig, kBlahSizeMid, "(%s)%c", kSigObjectObject, kSigVoid);
         meth_after = env->GetMethodID(clazz_bundle, kFuncAfterMethodExecute, sig);
-        //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+        if (!meth_after)
+            return org_probedroid_Instrument_ERR_ABNORMAL_BUNDLE;
     }
 
     // Parse the method signature to acquire the relevant data types.

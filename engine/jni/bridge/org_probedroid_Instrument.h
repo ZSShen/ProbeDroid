@@ -36,6 +36,10 @@ extern "C" {
 #define org_probedroid_Instrument_ERR_CLASS_NOT_FOUND 1L
 #undef org_probedroid_Instrument_ERR_NO_SUCH_METHOD
 #define org_probedroid_Instrument_ERR_NO_SUCH_METHOD 2L
+#undef org_probedroid_Instrument_ERR_EMPTY_STRING
+#define org_probedroid_Instrument_ERR_EMPTY_STRING 3L
+#undef org_probedroid_Instrument_ERR_ABNORMAL_BUNDLE
+#define org_probedroid_Instrument_ERR_ABNORMAL_BUNDLE 4L
 /*
  * Class:     org_probedroid_Instrument
  * Method:    instrumentMethodNative

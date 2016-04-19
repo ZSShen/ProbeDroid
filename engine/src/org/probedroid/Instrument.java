@@ -60,6 +60,8 @@ public abstract class Instrument {
     private static final int INSTRUMENT_OK = 0;
     private static final int ERR_CLASS_NOT_FOUND = 1;
     private static final int ERR_NO_SUCH_METHOD = 2;
+    private static final int ERR_EMPTY_STRING = 3;
+    private static final int ERR_ABNORMAL_BUNDLE = 4;
 
     /**
      * The default file output directory for analysts to dump their profiled
@@ -116,6 +118,30 @@ public abstract class Instrument {
         int stat = instrumentMethodNative(isStatic, nameClass, nameMethod,
                 signatureMethod, bundle);
         switch (stat) {
+        case ERR_EMPTY_STRING: {
+            StringBuffer sb = new StringBuffer();
+            if (nameClass == null || nameClass.isEmpty())
+                sb.append("Empty Class Name");
+            if (nameMethod == null || nameMethod.isEmpty()) {
+                if (sb.length() > 0)
+                    sb.append("; ");
+                sb.append("Empty Method Name");
+            }
+            if (signatureMethod == null || signatureMethod.isEmpty()) {
+                if (sb.length() > 0)
+                    sb.append("; ");
+                sb.append("Empty Method Signature");
+            }
+            if (bundle == null) {
+                if (sb.length() > 0)
+                    sb.append("; ");
+                sb.append("Empty Bundle");
+            }
+            throw new IllegalArgumentException(sb.toString());
+        }
+        case ERR_ABNORMAL_BUNDLE:
+            throw new IllegalArgumentException(
+                    "Abnormal Bundle lack of Necessary Members");
         case ERR_CLASS_NOT_FOUND:
             throw new ClassNotFoundException();
         case ERR_NO_SUCH_METHOD: {
