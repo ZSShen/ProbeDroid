@@ -1,6 +1,7 @@
 # **ProbeDroid**  
 
-A ***process level dynamic binary instrumentation kit***  for analysts to manipulate ***java methods*** on the fly. In short, ProbeDroid provides a ***Java library*** for analysts to craft their own instrumentation packages. Analysts can register gadgets to monitor the interested Java methods. Furthermore, by modifying the method arguments and return value, the application behavior can be dynamically altered as they wish.  
+A ***dynamic Java code instrumentation kit for Android application***.  It provides APIs for developers to designate the interested ***Java methods*** for instrumentation and to custom their own instrumentation gadgets. In the gadgets, the method input arguments and the return value will be boxed and delivered, and thus developers can conveniently record the runtime trace. Moreover, developers can even modify those arguments and return value, which will dynamically change the method behavior when the control returns to the instrumented application. Such feature can benefit program testing and coverage exploration.
+
 
 ## **Feature**  
 +  Process level dynamic Java method instrumentation
