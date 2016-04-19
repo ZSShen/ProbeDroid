@@ -27,6 +27,7 @@
 
 #include <jni.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
 
 #include "scoped_dl.h"
 
@@ -48,10 +49,12 @@ class Bootstrap
     bool CacheHotJavaTypes();
     bool LoadAnalysisModule();
     bool ResolveArtSymbol();
+    bool OpenMemoryPermission();
     bool DeployInstrumentGadgetComposer();
 
   private:
     static constexpr int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
+    static constexpr int kArtCodePerm = PROT_READ | PROT_WRITE | PROT_EXEC;
     static constexpr const char* kDirDexData = "data";
     static constexpr const char* kDirInstrument = "instrument";
     static constexpr const char* kDexFileTemp = "DexFile.dex";

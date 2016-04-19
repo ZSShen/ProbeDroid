@@ -57,6 +57,10 @@ import org.probedroid.support.MethodBundle;
  */
 public abstract class Instrument {
 
+    private static final int INSTRUMENT_OK = 0;
+    private static final int ERR_CLASS_NOT_FOUND = 1;
+    private static final int ERR_NO_SUCH_METHOD = 2;
+
     /**
      * The default file output directory for analysts to dump their profiled
      * data. <b><i> Do not modify this field! </i></b>
@@ -109,8 +113,17 @@ public abstract class Instrument {
             String nameMethod, String signatureMethod, MethodBundle bundle)
             throws ClassNotFoundException, NoSuchMethodException,
             IllegalArgumentException {
-        instrumentMethodNative(isStatic, nameClass, nameMethod,
+        int stat = instrumentMethodNative(isStatic, nameClass, nameMethod,
                 signatureMethod, bundle);
+        switch (stat) {
+        case ERR_CLASS_NOT_FOUND:
+            throw new ClassNotFoundException();
+        case ERR_NO_SUCH_METHOD: {
+            StringBuffer sb = new StringBuffer();
+            sb.append(nameMethod).append(signatureMethod);
+            throw new NoSuchMethodException(sb.toString());
+        }
+        }
     }
 
     /**
@@ -128,8 +141,7 @@ public abstract class Instrument {
      */
     public abstract void onApplicationStop();
 
-    private native void instrumentMethodNative(boolean isStatic,
+    private native int instrumentMethodNative(boolean isStatic,
             String nameClass, String nameMethod, String signatureMethod,
-            MethodBundle bundle) throws ClassNotFoundException,
-            NoSuchMethodException, IllegalArgumentException;
+            MethodBundle bundle);
 }

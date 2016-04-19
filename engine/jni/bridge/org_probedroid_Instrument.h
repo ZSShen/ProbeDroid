@@ -30,12 +30,18 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#undef org_probedroid_Instrument_INSTRUMENT_OK
+#define org_probedroid_Instrument_INSTRUMENT_OK 0L
+#undef org_probedroid_Instrument_ERR_CLASS_NOT_FOUND
+#define org_probedroid_Instrument_ERR_CLASS_NOT_FOUND 1L
+#undef org_probedroid_Instrument_ERR_NO_SUCH_METHOD
+#define org_probedroid_Instrument_ERR_NO_SUCH_METHOD 2L
 /*
  * Class:     org_probedroid_Instrument
  * Method:    instrumentMethodNative
- * Signature: (ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/probedroid/support/MethodBundle;)V
+ * Signature: (ZLjava/lang/String;Ljava/lang/String;Ljava/lang/String;Lorg/probedroid/support/MethodBundle;)I
  */
-JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
+JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
   (JNIEnv *, jobject, jboolean, jstring, jstring, jstring, jobject);
 
 #ifdef __cplusplus

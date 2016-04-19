@@ -25,6 +25,7 @@
 #                            Constant Definition                           #
 #--------------------------------------------------------------------------#
 .equ TLS_OFST_JNIENVEXT, 0x98
+.equ TLS_OFST_DELIVER_EXCEPTION, 0x234
 
 
 #--------------------------------------------------------------------------#
@@ -41,6 +42,41 @@ GetJniEnv:
     movl 8(%ebp), %esi
     movl %fs:TLS_OFST_JNIENVEXT, %eax
     movl %eax, (%esi)
+
+    popf
+    popa
+    leave
+    ret
+
+
+.global GetFuncDeliverException
+.type GetFuncDeliverException, @function
+GetFuncDeliverException:
+    push %ebp
+    movl %esp, %ebp
+    pusha
+    pushf
+
+    movl 8(%ebp), %esi
+    movl %fs:TLS_OFST_DELIVER_EXCEPTION, %eax
+    movl %eax, (%esi)
+
+    popf
+    popa
+    leave
+    ret
+
+
+.global SetFuncDeliverException
+.type SetFuncDeliverException, @function
+SetFuncDeliverException:
+    push %ebp
+    movl %esp, %ebp
+    pusha
+    pushf
+
+    movl 8(%ebp), %eax
+    movl %eax, %fs:TLS_OFST_DELIVER_EXCEPTION
 
     popf
     popa
@@ -211,4 +247,13 @@ QWORD_DOUBLE:               # For the floating point data type with width equal
 EXIT:
     addl $12, %esp
     pop %esi
+    ret
+
+
+.global ArtQuickDeliverExceptionTrampoline
+.type ArtQuickDeliverExceptionTrampoline, @function
+ArtQuickDeliverExceptionTrampoline:
+    push %eax
+    call ArtQuickDeliverException
+    add $4, %esp
     ret

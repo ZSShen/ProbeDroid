@@ -52,6 +52,9 @@ void* g_indirect_reference_table_remove;
 // The original entry to Thread::DecodeJObject().
 void* g_thread_decode_jobject;
 
+// The original entry to Thread::CreateInternalStackTrace().
+void* g_create_internal_stack_trace;
+
 // The original entry to the loadClass() quick compiled code.
 void* g_load_class_quick_compiled;
 
@@ -67,6 +70,18 @@ jmethodID g_meth_load_class;
 
 // The reentrant counter to avoid hook loop.
 thread_local uint32_t g_entrant_count = 0;
+
+// The buffer to cache the prologue of Thread::CreateInternalStackTrace.
+uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
+uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord] =
+    {   0x31, 0xc0, // xor %eax, %eax
+        0xc3,       // ret
+        0x90        // nop
+    };
+
+// The check point for exception restore when ProbeDroid native invoke JNI
+// function which may fail and throw exception.
+jmp_buf g_save_ptr;
 
 // The global map to maintain the information about all the instrumented methods
 // of the target app.
@@ -509,6 +524,11 @@ bool ClassCache::LoadClasses(JNIEnv* env)
     }
 
     return PROC_SUCC;
+}
+
+void ArtQuickDeliverException(void* throwable)
+{
+    longjmp(g_save_ptr, 1);
 }
 
 void MarshallingYard::Launch()

@@ -332,6 +332,8 @@ bool Bootstrap::ResolveArtSymbol()
     handle_.reset(dlopen(kPathLibArt, RTLD_LAZY));
     if (!handle_.get())
         return PROC_FAIL;
+
+    // The functions to handle local garbage collection.
     g_indirect_reference_table_add = handle_.resolve(kIndirectReferneceTableAdd);
     if (!g_indirect_reference_table_add)
         return PROC_FAIL;
@@ -341,6 +343,26 @@ bool Bootstrap::ResolveArtSymbol()
     g_thread_decode_jobject = handle_.resolve(kThreadDecodeJObject);
     if (!g_thread_decode_jobject)
         return PROC_FAIL;
+
+    // The functions for exception handling.
+    g_create_internal_stack_trace = handle_.resolve(kCreateInternalStackTrace);
+    if (!g_create_internal_stack_trace)
+        return PROC_FAIL;
+
+    return PROC_SUCC;
+}
+
+bool Bootstrap::OpenMemoryPermission()
+{
+    // Remove the write protection for Thread::CreateInternalStackTrace().
+    size_t page_size = getpagesize();
+    size_t raw_addr = reinterpret_cast<size_t>(g_create_internal_stack_trace);
+    void* align_addr = reinterpret_cast<void*>((raw_addr / page_size) * page_size);
+    if (mprotect(align_addr, page_size, kArtCodePerm) == -1) {
+        CAT(ERROR) << StringPrintf("%s", strerror(errno));
+        return PROC_FAIL;
+    }
+
     return PROC_SUCC;
 }
 
@@ -412,9 +434,11 @@ void __attribute__((constructor)) BootEntry()
         CAT(FATAL) << StringPrintf("Install and load instrument APK.");
 
     // Resolve the entry points of some critical libart functions which would be
-    // used for native code resource management.
+    // used for native code garbage collection and exception handling.
     if (bootstrap.ResolveArtSymbol() != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Resolve libart symbols.");
+    if (bootstrap.OpenMemoryPermission() != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Change libart access permission.");
 
     // Deploy the hooking gadget composer and finish the bootstrap process.
     // The control flow of the instrumented application will be diverted to

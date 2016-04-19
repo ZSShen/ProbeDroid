@@ -33,7 +33,9 @@
 #include <mutex>
 #include <thread>
 #include <jni.h>
+#include <setjmp.h>
 
+#include "globals.h"
 #include "signature.h"
 #include "logcat.h"
 #include "x86/gadget_x86.h"
@@ -294,6 +296,12 @@ class MarshallingYard
 // The gadget to extract JNI handle from TLS.
 extern "C" void GetJniEnv(JNIEnv**) __asm__("GetJniEnv");
 
+// The gadget to extract the function pointer to art_quick_deliver_exception.
+extern "C" void GetFuncDeliverException(void**) __asm__("GetFuncDeliverException");
+
+// The gadget to replace the function pointer to art_quick_deliver_exception.
+extern "C" void SetFuncDeliverException(void*) __asm__("SetFuncDeliverException");
+
 // The gadget to insert an object into the designated indirect reference table.
 // Note that the first argument is the pointer to art::IndirectReferenceTable.
 extern "C" jobject AddIndirectReference(void*, uint32_t, void*)
@@ -312,10 +320,21 @@ extern "C" void* DecodeJObject(void*, jobject) __asm__("DecodeJObject");
 extern "C" void* ComposeInstrumentGadgetTrampoline()
                                         __asm__("ComposeInstrumentGadgetTrampoline");
 
+// The gadget to silence the Runtime stack trace for exception object creation.
+extern "C" void CloseRuntimeStackTrace();
+
+// The gadget to restore the Runtime stack trace for exception object creation.
+extern "C" void OpenRuntimeStackTrace();
+
 // The trampoline to the function to marshall the instrument callbacks and the
 // original method call.
 extern "C" void* ArtQuickInstrumentTrampoline()
                                         __asm__("ArtQuickInstrumentTrampoline");
+
+// The trampoline to the fake exception delivery function which is used to
+// detour the Java exception thrown to ProbeDroid native.
+extern "C" void* ArtQuickDeliverExceptionTrampoline()
+                                    __asm__("ArtQuickDeliverExceptionTrampoline");
 
 // The function which launches the composer that will set all the instrument
 // gadgets towards user designated Java methods for instrumentation.
@@ -326,6 +345,9 @@ extern "C" void* ComposeInstrumentGadget(void*, void*, void*);
 // to fulfill the expected behavior of instrumented app.
 extern "C" void ArtQuickInstrument(void**, void**, void*, void*, void*, void*, void**);
 
+// The fake exception delivery function which is used to detour the Java exception
+// thrown to ProbeDroid native.
+extern "C" void ArtQuickDeliverException(void*);
 
 // The cached symbols delivered from injector.
 extern char* g_module_path;
@@ -344,6 +366,9 @@ extern void* g_indirect_reference_table_remove;
 // The original entry to Thread::DecodeJObject().
 extern void* g_thread_decode_jobject;
 
+// The original entry to Thread::CreateInternalStackTrace().
+extern void* g_create_internal_stack_trace;
+
 // The original entry to the loadClass() quick compiled code.
 extern void* g_load_class_quick_compiled;
 
@@ -359,6 +384,14 @@ extern jmethodID g_meth_load_class;
 
 // The reentrant counter to avoid hook loop.
 extern thread_local uint32_t g_entrant_count;
+
+// The buffer to cache the prologue of Thread::CreateInternalStackTrace.
+extern uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
+extern uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord];
+
+// The check point for exception restore when ProbeDroid native invoke JNI
+// function which may fail and throw exception.
+extern jmp_buf g_save_ptr;
 
 // The global map to maintain the information about all the instrumented methods
 // of the target app.

@@ -131,6 +131,8 @@ static const char* kIndirectReferenceTableRemove =
                     "_ZN3art22IndirectReferenceTable6RemoveEjPv";
 static const char* kThreadDecodeJObject =
                     "_ZNK3art6Thread13DecodeJObjectEP8_jobject";
+static const char* kCreateInternalStackTrace =
+"_ZNK3art6Thread24CreateInternalStackTraceILb0EEEP8_jobjectRKNS_33ScopedObjectAccessAlreadyRunnableE";
 
 extern const uint32_t kNoData;
 extern const uint32_t kDwordInt;

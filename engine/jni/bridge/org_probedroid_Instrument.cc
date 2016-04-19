@@ -25,6 +25,7 @@
 #include <cstring>
 #include <vector>
 #include <new>
+#include <setjmp.h>
 
 #include "org_probedroid_instrument.h"
 #include "globals.h"
@@ -35,29 +36,55 @@
 #include "stringprintf.h"
 
 
-JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
+JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
   (JNIEnv *env, jobject thiz, jboolean is_static, jstring name_class,
    jstring name_method, jstring signature_method, jobject bundle)
 {
-    jboolean is_copy = JNI_FALSE;
     if (env->IsSameObject(name_class, nullptr) == JNI_TRUE ||
         env->IsSameObject(name_method, nullptr) == JNI_TRUE ||
         env->IsSameObject(signature_method, nullptr) == JNI_TRUE ||
         env->IsSameObject(bundle, nullptr) == JNI_TRUE)
-        CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+        ;
+    //CHK_EXCP_AND_RET_FAIL(env, RETHROW(kNormIllegalArgument));
 
+    jboolean is_copy = JNI_FALSE;
     const char* cstr_class_name = env->GetStringUTFChars(name_class, &is_copy);
     const char* cstr_method_name = env->GetStringUTFChars(name_method, &is_copy);
     const char* cstr_method_sig = env->GetStringUTFChars(signature_method, &is_copy);
     if (!cstr_class_name || !cstr_method_name || !cstr_method_sig) {
-        jthrowable except;
-        RETHROW(kNormIllegalArgument);
+        //jthrowable except;
+        //RETHROW(kNormIllegalArgument);
     }
 
-    // Load the hosting class of the to be instrumented method.
+    // Since our gadgets are dynamically injected, there is no corresponding
+    // ArtMethod information. If the successive JNI call throws exception,
+    // Android Runtime will try to build the stack trace which will trigger the
+    // unchecked NULL ArtMethod error. This is natural, because Android Runtime
+    // does not expect such "unrecorded methods". To solve the issue, we must
+    // silence the stack trace.
+    CloseRuntimeStackTrace();
+
+    // Remember that we are in ClassLoader.loadClass() called by ActivityThread
+    // to load the android.app.Application class. And we just slickly use that
+    // class loader to load the to be instrumented code. If the class loader
+    // cannot find the class, it expects to return to the ClassNotFound catch
+    // block in the Java site. During the backward stack trace, it will enter
+    // this gadget. Again, NULL ArtMethod error! To solve the issue, we patch
+    // the original exception delivery function and let the control flow directly
+    // dive to here without Runtime stack trace. Then we skip this level and
+    // re-throw the exception to instrumentation package.
+    void* except_original;
+    GetFuncDeliverException(&except_original);
+    void* except_hooked = reinterpret_cast<void*>(ArtQuickDeliverExceptionTrampoline);
+    SetFuncDeliverException(except_hooked);
+
+    // Try to the hosting class of the to be instrumented method.
+    if (setjmp(g_save_ptr) != 0) {
+        SetFuncDeliverException(except_original);
+        return org_probedroid_Instrument_ERR_CLASS_NOT_FOUND;
+    }
     jobject ref_class = env->CallObjectMethod(g_ref_class_loader,
                                               g_meth_load_class, name_class);
-    CHK_EXCP_AND_RET(env, RETHROW(kNormClassNotFound));
     jclass clazz = reinterpret_cast<jclass>(ref_class);
 
     // Normalize the class name.
@@ -71,14 +98,19 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     }
 
     // Resolve the to be instrumented method.
-    //jclass clazz = env->FindClass(sig);
-    //CHK_EXCP_AND_RET(env, RETHROW(kNormClassNotFound));
     jmethodID meth_tge;
     if (is_static)
         meth_tge = env->GetStaticMethodID(clazz, cstr_method_name, cstr_method_sig);
     else
         meth_tge = env->GetMethodID(clazz, cstr_method_name, cstr_method_sig);
-    CHK_EXCP_AND_RET(env, RETHROW(kNormNoSuchMethod));
+    if (!meth_tge) {
+        env->ExceptionClear();
+        SetFuncDeliverException(except_original);
+        return org_probedroid_Instrument_ERR_NO_SUCH_METHOD;
+    }
+
+    // Restore the exception delivery function.
+    SetFuncDeliverException(except_original);
 
     // Get the entry point to the quick compiled code of that method.
     art::ArtMethod *art_meth = reinterpret_cast<art::ArtMethod*>(meth_tge);
@@ -91,9 +123,9 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
 
     snprintf(sig, kBlahSizeMid, "%c", kSigBoolean);
     jfieldID fld_before = env->GetFieldID(clazz_bundle, kFieldInterceptBefore, sig);
-    CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+    //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
     jfieldID fld_after = env->GetFieldID(clazz_bundle, kFieldInterceptAfter, sig);
-    CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+    //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
 
     jboolean before = env->GetBooleanField(bundle, fld_before);
     jboolean after = env->GetBooleanField(bundle, fld_after);
@@ -103,12 +135,12 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     if (before) {
         snprintf(sig, kBlahSizeMid, "(%c%s)%c", kSigArray, kSigObjectObject, kSigVoid);
         meth_before = env->GetMethodID(clazz_bundle, kFuncBeforeMethodExecute, sig);
-        CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+        //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
     }
     if (after) {
         snprintf(sig, kBlahSizeMid, "(%s)%c", kSigObjectObject, kSigVoid);
         meth_after = env->GetMethodID(clazz_bundle, kFuncAfterMethodExecute, sig);
-        CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
+        //CHK_EXCP_AND_RET(env, RETHROW(kNormIllegalArgument));
     }
 
     // Parse the method signature to acquire the relevant data types.
@@ -141,5 +173,5 @@ JNIEXPORT void JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     uint64_t entry_instrument = reinterpret_cast<uint64_t>(ArtQuickInstrumentTrampoline);
     art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry_instrument);
 
-    return;
+    return org_probedroid_Instrument_INSTRUMENT_OK;
 }

@@ -43,6 +43,7 @@ static const int kPageSize = 4096;
 static const int kBlahSize = 1024;
 static const int kBlahSizeMid = 512;
 static const int kBlahSizeTiny = 128;
+static const int kCacheSizeDWord = 4;
 
 // Auxiliary symbols for inter-process communication.
 static const char kSignAssign = '=';
