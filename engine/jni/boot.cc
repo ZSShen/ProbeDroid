@@ -270,12 +270,17 @@ bool Bootstrap::LoadAnalysisModule()
 
         jobject clazz = env->CallObjectMethod(dexfile, meth, entry, class_loader);
         CHK_EXCP_AND_RET_FAIL(env);
-        if (strcmp(cstr_class, g_class_name) != 0)
+
+        env->DeleteLocalRef(str_class);
+        if (strcmp(cstr_class, g_class_name) != 0) {
+            env->DeleteLocalRef(clazz);
             continue;
+        }
 
         // If the class name matches the main class of the analysis APK, cache
         // the class and instantiate an object for it.
         g_class_analysis_main = reinterpret_cast<jclass>(env->NewGlobalRef(clazz));
+        CAT(INFO) << StringPrintf("%p %p", clazz, g_class_analysis_main);
         if (!g_class_analysis_main) {
             CAT(ERROR) << StringPrintf("Allocate a global reference for the main "
                                         "class of the instrument APK.");
