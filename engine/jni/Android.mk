@@ -35,4 +35,6 @@ LOCAL_LDLIBS            +=  -L$(SYSROOT)/usr/lib \
 
 LOCAL_CPP_EXTENSION     := .cxx .cpp .cc
 
+LOCAL_DISABLE_FATAL_LINKER_WARNINGS=true
+
 include $(BUILD_SHARED_LIBRARY)
