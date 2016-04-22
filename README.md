@@ -4,9 +4,14 @@ ProbeDroid is a ***dynamic Java code instrumentation kit for Android application
 
 
 ## **Feature**  
-+  Process level dynamic Java method instrumentation
-+  Java library as integration interface
-
++  Dynamic Java method instrumentation kit for Android app  
+   +  Java library as integration interface for developers  
+   +  Templates for developer to customize the analysis procedure for the interest methods  
+   +  Modifiable captured method input arguments and return value  
++  Direct build procedure ***without Android source dependency***  
+   +  Pulling the GitHub source and following the document  
++  Succinct deployment ***without customized ROM or system apps***
+   +  Only ProbeDroid engine and developers' instrumentation package are required
 
 ## **Limitation**
 +  Currently supporting Android(L) 5.0 and Intel x86 ISA
