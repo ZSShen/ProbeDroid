@@ -24,7 +24,7 @@ LOCAL_SRC_FILES         :=  ../../common/libffi/src/debug.c \
                             ./arch/x86/gadget_x86.cc \
                             boot.cc \
                             signature.cc \
-                            ./bridge/org_probedroid_instrument.cc
+                            ./bridge/org_probedroid_Instrument.cc
 
 LOCAL_CFLAGS            := -g -fexceptions
 
@@ -34,5 +34,7 @@ LOCAL_LDLIBS            +=  -L$(SYSROOT)/usr/lib \
                             -llog \
 
 LOCAL_CPP_EXTENSION     := .cxx .cpp .cc
+
+LOCAL_DISABLE_FATAL_LINKER_WARNINGS := true
 
 include $(BUILD_SHARED_LIBRARY)
