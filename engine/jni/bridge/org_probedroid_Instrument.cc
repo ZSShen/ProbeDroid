@@ -27,7 +27,7 @@
 #include <new>
 #include <setjmp.h>
 
-#include "org_probedroid_instrument.h"
+#include "org_probedroid_Instrument.h"
 #include "globals.h"
 #include "gadget.h"
 #include "mirror/art_method-inl.h"
