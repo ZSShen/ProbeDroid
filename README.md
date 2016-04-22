@@ -13,9 +13,10 @@ ProbeDroid is a ***dynamic Java code instrumentation kit for Android application
 +  Succinct deployment ***without customized ROM or system apps***
    +  Only ProbeDroid engine and developers' instrumentation package are required
 
-## **Limitation**
-+  Currently supporting Android(L) 5.0 and Intel x86 ISA
-+  Only tested in Android virtual device 
+## **Limitation**  
++  Cannot instrument ***abstract*** and ***native***   methods 
++  Currently only supporting ***Android 5.0*** and the machines with ***Intel x86 ISA***
++  Not recommended to deploy on real device 
 
 
 <img src="https://github.com/ZSShen/ProbeDroid/blob/master/res/ProbeDroidOverview.png"/width="750px">
