@@ -114,6 +114,9 @@ static const char kDeliObjectTail = ';';
 // Cache some critical signatures used in our ProbeDroid SDK.
 static const char* kNormInstrument = "org/probedroid/Instrument";
 
+static const char* kPkgInstrument = "org.probedroid.Instrument";
+static const char* kPrefixAndroidSupport = "android.support";
+
 static const char* kFuncPrepareNativeBridge = "prepareNativeBridge";
 static const char* kFuncOnApplicationStart = "onApplicationStart";
 static const char* kFuncOnApplicationStop = "onApplicationStop";
