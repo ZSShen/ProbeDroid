@@ -219,6 +219,7 @@ bool Bootstrap::LoadAnalysisModule()
         idx_end = g_module_path + strlen(g_module_path) - 1;
     char keyword[kBlahSizeTiny];
     strncpy(keyword, idx_bgn, idx_end - idx_bgn + 1);
+    keyword[idx_end - idx_bgn + 1] = 0;
 
     char sig[kBlahSizeMid];
     snprintf(sig, kBlahSizeMid, "%s/%s.dex", dex_path_.get(), keyword);
