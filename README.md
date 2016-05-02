@@ -1,22 +1,21 @@
 # **ProbeDroid**  
 
-ProbeDroid is a ***dynamic Java code instrumentation kit for Android application***. It exports APIs for developers to craft their own analysis tools. Thus they can trace, profile, or change the behavior of a designated application when it is launched. Essentially, a ***Java method*** is the basic instrumentation unit. Developers can designate the interested Java methods with the provided APIs. Also, the template callbacks are prepared. Developers can override and register the callbacks to fit the need for the interested target . Therefore, when the target is invoked, or when it is finished, the control is passed to the callbacks. And it is the timing to manipulate the boxed input arguments and return value. Currently, ProbeDroid targets on Android 5.0 and above. To build the ProbeDroid kit, developers just pull the package from GitHub and build it by following the commands listed in the document. Android source tree is not required.   
-
+ProbeDroid is a ***dynamic Java code instrumentation kit for Android application***. It provides APIs for developers to craft their own instrumentation tools. Thus they can trace, profile, or alter the runtime behavior of an interested application. Essentially, ***Java method*** is the ***basic instrumentation unit***. To manipulate the interested methods, developers should override the template instrumentation gadgets and register them to hook interested methods. During runtime, when those methods are invoked, the control flow is diverted to the gadgets. And it is the timing to manipulate the boxed method input arguments and return value. In the current stage, ProbeDroid targets on Android 5.0 and above. To build ProbeDroid kit, developers just pull the package from GitHub and follow the build commands. Android source tree is not required.  
 
 ## **Feature**  
 +  Dynamic Java method instrumentation kit for Android app  
    +  Java library as integration interface for developers  
-   +  Templates for developer to customize the analysis procedure for the interest methods  
-   +  Modifiable captured method input arguments and return value  
+   +  ***Customizable instrumentation gadgets*** to fit different applications  
+   +  ***Modifiable method input and output*** to alter app behavior  
 +  Direct build procedure ***without Android source dependency***  
    +  Pulling the GitHub source and following the document  
-+  Succinct deployment ***without customized ROM or system apps***
-   +  Only ProbeDroid engine and developers' instrumentation package are required
++  Succinct deployment ***without customized ROM or system apps***  
+   +  Only ProbeDroid engine and developers' instrumentation package are required  
 
 ## **Limitation**  
-+  Cannot instrument ***abstract*** and ***native***   methods 
-+  Currently only supporting ***Android 5.0*** and the machines with ***Intel x86 ISA***
-+  Not recommended to deploy on real device 
++  Cannot instrument ***abstract*** and ***native*** methods  
++  Currently only supporting ***Android 5.0*** and the devices based on ***Intel x86 ISA***  
++  Not recommended to deploy on real device  
 
 
 <img src="https://github.com/ZSShen/ProbeDroid/blob/master/res/ProbeDroidOverview.png"/width="750px">
