@@ -177,5 +177,10 @@ JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     uint64_t entry_instrument = reinterpret_cast<uint64_t>(ArtQuickInstrumentTrampoline);
     art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry_instrument);
 
+    // In the function prologue, we silence the stack trace by patching the dummy
+    // code. However, the NULL object returned by the dummy code will surprise
+    // the target app if it really needs that exception. So we must restore the
+    // code to avoid unexpected runtime crash.
+    OpenRuntimeStackTrace();
     return org_probedroid_Instrument_INSTRUMENT_OK;
 }
