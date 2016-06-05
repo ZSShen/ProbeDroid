@@ -742,10 +742,9 @@ inline bool MarshallingYard::EncapsulateObject(char type, void*** p_scan, jobjec
         }
         case kTypeObject: {
             void* obj = *scan++;
-            if (obj) {
+            if (obj)
                 *p_obj = AddIndirectReference(ref_table_, cookie_, obj);
-                gc_manual_.push_back(*p_obj);
-            } else
+            else
                 *p_obj = nullptr;
             break;
         }
@@ -833,10 +832,8 @@ inline bool MarshallingYard::DecapsulateObject(char type, bool must_decode_ref,
         }
         case kTypeObject: {
             if (must_decode_ref) {
-                if (obj) {
+                if (obj)
                     *scan++ = DecodeJObject(thread_, obj);
-                    gc_manual_.push_back(obj);
-                }
                 else
                     *scan++ = nullptr;
             }

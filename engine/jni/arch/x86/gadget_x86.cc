@@ -77,6 +77,7 @@ void* ComposeInstrumentGadget(void *ecx, void *eax, void *edx)
     RemoveIndirectReference(ref_table, cookie, ref_arg_first);
     RemoveIndirectReference(ref_table, cookie, ref_clazz);
 
+    CAT(INFO) << StringPrintf("Gadget Deployment Success.");
     return clazz;
 }
 
