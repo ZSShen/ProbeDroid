@@ -77,6 +77,14 @@ class EggHunter
     void Hunt(const char*, const char*, const char*, const char*);
 
   private:
+    #define SYSERR PLOG(ERROR)
+    #define FINAL(label, ...)                                                  \
+        do {                                                                   \
+            __VA_ARGS__;                                                       \
+            rtn = PROC_FAIL;                                                   \
+            goto label;                                                        \
+        } while (0);
+
     // Routines to resolve zygote pid and clean the target app.
     bool Initialize(const char*);
     bool ExecutePs(const char*, pid_t*);
