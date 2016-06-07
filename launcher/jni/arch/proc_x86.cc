@@ -35,7 +35,7 @@
 
 namespace proc {
 
-bool EggHunter::RemoteMethodCall(struct pt_regs* reg, uintptr_t addr_func,
+bool EggHunter::RemoteFunctionCall(struct pt_regs* reg, uintptr_t addr_func,
                             long* param, size_t count_word, uintptr_t* p_ret)
 {
     bool rtn = PROC_SUCC;
