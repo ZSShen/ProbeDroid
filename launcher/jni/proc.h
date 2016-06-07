@@ -97,7 +97,7 @@ class EggHunter
 
     // Routines to inject "libProbeDroid.so" to the target app.
     bool InjectApp(const char*, const char*, const char*);
-    bool RemoteMethodCall(struct user_regs_struct*, long*, size_t);
+    bool RemoteFunctionCall(struct pt_regs*, uintptr_t, long*, size_t, uintptr_t*);
     bool PokeText(uintptr_t, const char*, size_t);
     bool PeekText(uintptr_t, char*, size_t);
 

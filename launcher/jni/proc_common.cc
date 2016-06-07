@@ -31,6 +31,7 @@
 #include <sys/wait.h>
 #include <sys/syscall.h>
 #include <sys/ptrace.h>
+#include <sys/mman.h>
 
 #include "proc.h"
 #include "scoped_dl.h"
@@ -297,6 +298,111 @@ EXIT:
         ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
 
     ptrace(PTRACE_DETACH, pid_zygote_, nullptr, nullptr);
+    return rtn;
+}
+
+bool EggHunter::InjectApp(const char* lib_path, const char* module_path,
+                                const char* class_name)
+{
+    pid_t pid_inject = getpid();
+
+    if (func_tbl_.Resolve(pid_inject, pid_app_) != PROC_SUCC)
+        return PROC_FAIL;
+
+    // Prepare the key-value pairs for inter-process communication. Zero padding
+    // is necessary to produce the text word recognized by ptrace().
+    char payload[kBlahSizeMid];
+    size_t len_payload = strlen(lib_path);
+    strncpy(payload, lib_path, kBlahSizeMid);
+    payload[len_payload++] = 0;
+
+    size_t append = snprintf(payload + len_payload, kBlahSizeMid - len_payload,
+                             "%s%c%s", kKeyPathCoreLibrary, kSignAssign, lib_path);
+    len_payload += append;
+    payload[len_payload++] = 0;
+
+    append = snprintf(payload + len_payload, kBlahSizeMid - len_payload,
+                      "%s%c%s", kKeyPathAnalysisModule, kSignAssign, module_path);
+    len_payload += append;
+    payload[len_payload++] = 0;
+
+    append = snprintf(payload + len_payload, kBlahSizeMid - len_payload,
+                      "%s%c%s", kKeyNameMainClass, kSignAssign, class_name);
+    len_payload += append;
+    payload[len_payload++] = 0;
+
+    div_t num_word = div(len_payload, sizeof(long));
+    size_t patch = (num_word.rem > 0)? (sizeof(long) - num_word.rem) : 0;
+    for (size_t i = 0 ; i < patch ; ++i)
+        payload[len_payload++] = 0;
+
+    // Prepare the addresses of mmap() and dlopen() in the target app.
+    uintptr_t addr_mmap = func_tbl_.GetMmap();
+    uintptr_t addr_dlopen = func_tbl_.GetDlopen();
+
+    bool rtn = PROC_SUCC;
+    size_t count_word;
+    uintptr_t addr_blk;
+
+    // Backup the context of the target app.
+    struct pt_regs reg_orig;
+    if (ptrace(PTRACE_GETREGS, pid_app_, nullptr, &reg_orig) == -1)
+        FINAL(EXIT, SYSERR);
+    struct pt_regs reg_modi;
+    memcpy(&reg_modi, &reg_orig, sizeof(struct pt_regs));
+
+    // Firstly, we force the target app to execute mmap(). The allocated
+    // block will be stuffed with the path name of "libProbeDroid.so".
+    // Note, to fit the calling convention,
+    // param[0] stores the return address, and
+    // param[6] to param[1] is the actual parameters of mmap().
+    long param[kBlahSizeMid];
+    param[0] = 0;
+    param[1] = 0;
+    param[2] = kPageSize;
+    param[3] = PROT_READ | PROT_WRITE | PROT_EXEC;
+    param[4] = MAP_ANONYMOUS | MAP_PRIVATE;
+    param[5] = 0;
+    param[6] = 0;
+
+    count_word = 7;
+    if (RemoteFunctionCall(&reg_modi, addr_mmap, param, count_word, &addr_blk) == PROC_FAIL)
+        FINAL(EXIT);
+
+    #if __WORDSIZE == 64
+    TIP() << StringPrintf("[+] mmap() successes with 0x%016lx returned.\n", addr_blk);
+    #else
+    TIP() << StringPrintf("[+] mmap() successes with 0x%08x returned.\n", addr_blk);
+    #endif
+
+    // Stuff the path name of "libProbeDroid.so" into the newly mapped space.
+    if (PokeText(addr_blk, payload, len_payload) == -1)
+        FINAL(EXIT, SYSERR);
+
+    // Secondly, we force the target app to execute dlopen().
+    // Then "libProbeDroid.so" will be loaded by it.
+    // Note, to fit the calling convention,
+    // param[0] stores the return address, and
+    // param[2] to param[1] is the actual parameters of dlopen().
+    param[0] = 0;
+    param[1] = addr_blk;
+    param[2] = RTLD_NOW;
+
+    count_word = 3;
+    if (RemoteFunctionCall(&reg_modi, addr_dlopen, param, count_word, nullptr) == PROC_FAIL)
+        FINAL(EXIT);
+    TIP() << StringPrintf("[+] dlopen() successes.\n");
+
+    // At this stage, we finish the library injection and should restore
+    // the context of the target app.
+    if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, &reg_orig) == -1)
+        FINAL(EXIT, SYSERR);
+
+    if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
+        FINAL(EXIT, SYSERR);
+
+EXIT:
+    ptrace(PTRACE_DETACH, pid_app_, nullptr, nullptr);
     return rtn;
 }
 

@@ -26,7 +26,6 @@
 #include <sys/wait.h>
 #include <sys/syscall.h>
 #include <sys/ptrace.h>
-#include <sys/mman.h>
 
 #include "../proc.h"
 #include "scoped_dl.h"
@@ -34,14 +33,12 @@
 #include "stringprintf.h"
 
 
-bool proc::EggHunter::RemoteMethodCall(struct user_regs_struct* reg, long* stack,
-                                       size_t count_byte)
+namespace proc {
+
+bool EggHunter::RemoteFunctionCall(struct pt_regs* reg, uintptr_t addr_func,
+                            long* param, size_t count_word, uintptr_t* p_ret)
 {
     return PROC_SUCC;
 }
 
-bool proc::EggHunter::InjectApp(const char* lib_path, const char* module_path,
-                                const char* class_name)
-{
-    return PROC_SUCC;
 }
