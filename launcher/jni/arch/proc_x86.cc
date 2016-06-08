@@ -53,11 +53,11 @@ bool EggHunter::RemoteFunctionCall(struct pt_regs* reg, uintptr_t addr_func,
     if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, reg) == -1)
         FINAL(EXIT, SYSERR);
 
-    // Invoke the remote method.
+    // Invoke the remote function.
     if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
         FINAL(EXIT, SYSERR);
 
-    // we should receive a SIGSEGV triggered by the target app due to
+    // We should receive a SIGSEGV triggered by the target app due to
     // the invalid return address.
     int status;
     if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)

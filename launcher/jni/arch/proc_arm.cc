@@ -35,10 +35,78 @@
 
 namespace proc {
 
+// The number of cache registers to store function call parameters.
+static const size_t kCacheRegCount = 4;
+
+// The bit mask to check for ARM or Thumb mode.
+static const uint32_t kModeMask = 0x1 << 5;
+
+
 bool EggHunter::RemoteFunctionCall(struct pt_regs* reg, uintptr_t addr_func,
                             long* param, size_t count_word, uintptr_t* p_ret)
 {
-    return PROC_SUCC;
+    bool rtn = PROC_SUCC;
+
+    // The first parameter is the invalid return address which won't be used
+    // in the ARM related architecture.
+    ++param;
+    --count_word;
+
+    // Overwrite the target cache registers with the first 4 parameters.
+    size_t idx_word = 0;
+    while (idx_word < count_word && idx_word < kCacheRegCount) {
+        reg->uregs[idx_word] = param[idx_word];
+        ++idx_word;
+    }
+
+    if (idx_word < count_word) {
+        count_word -= kCacheRegCount;
+        size_t count_byte = count_word * sizeof(long);
+
+        // Set the new stack pointer.
+        reg->ARM_sp -= count_byte;
+
+        // Overwrite the target stack content with the remained parameters.
+        if (PokeText(reg->ARM_sp, reinterpret_cast<char*>(param + kCacheRegCount),
+                    count_byte) != PROC_SUCC)
+            FINAL(EXIT, SYSERR);
+    }
+
+    // Set the new program counter.
+    reg->ARM_pc = addr_func;
+    if (reg->ARM_pc & 0x1) {
+        // Thumb mode. All the instructions should be half-word aligned.
+        reg->ARM_pc &= ~0x1;
+        reg->ARM_cpsr |= kModeMask;
+    } else
+        // ARM mode
+        reg->ARM_cpsr &= ~kModeMask;
+
+    // Set the invalid return address.
+    reg->ARM_lr = 0;
+
+    // Overwrite the target register set.
+    if (ptrace(PTRACE_SETREGS, pid_app_, nullptr, reg) == -1)
+        FINAL(EXIT, SYSERR);
+
+    // Invoke the remote function.
+    if (ptrace(PTRACE_CONT, pid_app_, nullptr, nullptr) == -1)
+        FINAL(EXIT, SYSERR);
+
+    // We should receive a SIGSEGV triggered by the target app due to
+    // the invalid return address.
+    int status;
+    if (waitpid(pid_app_, &status, WUNTRACED) != pid_app_)
+        FINAL(EXIT, SYSERR);
+
+    if (p_ret) {
+        if (ptrace(PTRACE_GETREGS, pid_app_, nullptr, reg) == -1)
+            FINAL(EXIT, SYSERR);
+        *p_ret = reg->ARM_r0;
+    }
+
+EXIT:
+    return rtn;
 }
 
 }
