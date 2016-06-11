@@ -38,7 +38,11 @@
 #include "globals.h"
 #include "signature.h"
 #include "logcat.h"
-#include "x86/gadget_x86.h"
+#if defined(__arm__)
+    #include "gadget_arm.h"
+#else
+    #include "gadget_x86.h"
+#endif
 #include "ffi.h"
 
 
