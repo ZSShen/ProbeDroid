@@ -1,6 +1,0 @@
-In file included from C:/Users/userpc/Documents/GitHub/ProbeDroid/engine/jni/gadget_common.cc:31:0:
-C:/Users/userpc/Documents/GitHub/ProbeDroid/engine/jni/gadget.h:41:28: fatal error: x86/gadget_x86.h: No such file or directory
- #include "x86/gadget_x86.h"
-                            ^
-compilation terminated.
-make.exe: *** [C:/Users/userpc/Documents/GitHub/ProbeDroid/engine/obj/local/x86/objs/ProbeDroid/gadget_common.o] Error 1
