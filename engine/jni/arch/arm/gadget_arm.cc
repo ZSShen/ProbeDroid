@@ -35,7 +35,7 @@
 
 void* ComposeInstrumentGadget(void *r1, void *r0, void *r2)
 {
-	return nullptr;
+    return nullptr;
 }
 
 void ArtQuickInstrument(void** ret_format, void** ret_value, void* r1, void* r0,
@@ -45,24 +45,10 @@ void ArtQuickInstrument(void** ret_format, void** ret_value, void* r1, void* r0,
 
 void CloseRuntimeStackTrace()
 {
-    uint8_t* ptr = reinterpret_cast<uint8_t*>(g_create_internal_stack_trace);
-    g_prologue_original_stack_trace[0] = ptr[0];
-    g_prologue_original_stack_trace[1] = ptr[1];
-    g_prologue_original_stack_trace[2] = ptr[2];
-    g_prologue_original_stack_trace[3] = ptr[3];
-    ptr[0] = g_prologue_hooked_stack_trace[0];
-    ptr[1] = g_prologue_hooked_stack_trace[1];
-    ptr[2] = g_prologue_hooked_stack_trace[2];
-    ptr[3] = g_prologue_hooked_stack_trace[3];
 }
 
 void OpenRuntimeStackTrace()
 {
-    uint8_t* ptr = reinterpret_cast<uint8_t*>(g_create_internal_stack_trace);
-    ptr[0] = g_prologue_original_stack_trace[0];
-    ptr[1] = g_prologue_original_stack_trace[1];
-    ptr[2] = g_prologue_original_stack_trace[2];
-    ptr[3] = g_prologue_original_stack_trace[3];
 }
 
 void InputMarshaller::Extract(const std::vector<char>& input_type, void** arguments)

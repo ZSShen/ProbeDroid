@@ -33,6 +33,17 @@
 #include "jni_except-inl.h"
 
 
+// The buffer to cache the prologue of Thread::CreateInternalStackTrace.
+uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
+
+// The dummy code to replace the original prologue.
+uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord] =
+    {   0x31, 0xc0, // xor %eax, %eax
+        0xc3,       // ret
+        0x90        // nop
+    };
+
+
 void* ComposeInstrumentGadget(void *ecx, void *eax, void *edx)
 {
     JNIEnv* env;

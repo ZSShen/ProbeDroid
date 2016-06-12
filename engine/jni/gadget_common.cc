@@ -71,14 +71,6 @@ jmethodID g_meth_load_class;
 // The reentrant counter to avoid hook loop.
 thread_local uint32_t g_entrant_count = 0;
 
-// The buffer to cache the prologue of Thread::CreateInternalStackTrace.
-uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
-uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord] =
-    {   0x31, 0xc0, // xor %eax, %eax
-        0xc3,       // ret
-        0x90        // nop
-    };
-
 // The check point for exception restore when ProbeDroid native invoke JNI
 // function which may fail and throw exception.
 jmp_buf g_save_ptr;
