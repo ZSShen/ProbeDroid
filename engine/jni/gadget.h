@@ -361,6 +361,9 @@ extern char* g_class_name;
 // The cached Java VM handle.
 extern JavaVM* g_jvm;
 
+// The original entry to JNI_GetCreatedJavaVMs.
+extern void* g_get_created_java_vms;
+
 // The original entry to IndirectReferenceTable::Add().
 extern void* g_indirect_reference_table_add;
 

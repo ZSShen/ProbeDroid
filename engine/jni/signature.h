@@ -128,6 +128,7 @@ static const char* kFieldInterceptAfter = "mInterceptAfter";
 static const char* kFieldPathOutputDirectory = "mPathOutputDirectory";
 
 // Cache some critical C++ function signatures exported from libart.
+static const char* kGetCreatedJavaVMs = "JNI_GetCreatedJavaVMs";
 static const char* kIndirectReferneceTableAdd =
                     "_ZN3art22IndirectReferenceTable3AddEjPNS_6mirror6ObjectE";
 static const char* kIndirectReferenceTableRemove =

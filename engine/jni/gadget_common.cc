@@ -43,6 +43,9 @@ char* g_class_name;
 // The cached Java VM handle.
 JavaVM* g_jvm;
 
+// The original entry to JNI_GetCreatedJavaVMs.
+void* g_get_created_java_vms;
+
 // The original entry to IndirectReferenceTable::Add().
 void* g_indirect_reference_table_add;
 
