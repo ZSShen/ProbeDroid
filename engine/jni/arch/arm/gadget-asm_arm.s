@@ -42,6 +42,12 @@ SetFuncDeliverException:
 
 .global ComposeInstrumentGadgetTrampoline
 ComposeInstrumentGadgetTrampoline:
+    @ r0 stores ArtMethod* pointer
+    @ r1 stores the receiver pointer
+    @ r2 stores the first argument
+    push {lr}
+    bl ComposeInstrumentGadget
+    pop {lr}
     bx  lr
 
 

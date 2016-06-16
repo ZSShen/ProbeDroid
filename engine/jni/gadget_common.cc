@@ -88,7 +88,7 @@ void ArtQuickDeliverException(void* throwable)
     longjmp(g_save_ptr, 1);
 }
 
-void* ComposeInstrumentGadget(void *ecx, void *eax, void *edx)
+void* ComposeInstrumentGadget(void *meth, void *receiver, void *arg_first)
 {
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
@@ -104,33 +104,32 @@ void* ComposeInstrumentGadget(void *ecx, void *eax, void *edx)
 
     // Insert the receiver and the first argument into the local indirect
     // reference table, and the reference key is returned.
-    jobject ref_obj = AddIndirectReference(ref_table, cookie, ecx);
-    jobject ref_arg_first = AddIndirectReference(ref_table, cookie, edx);
+    jobject ref_receiver = AddIndirectReference(ref_table, cookie, receiver);
+    jobject ref_arg_first = AddIndirectReference(ref_table, cookie, arg_first);
 
     // Restore the entry point to the quick compiled code of "loadClass()".
-    art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(eax);
+    art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(meth);
     uint64_t entry = reinterpret_cast<uint64_t>(g_load_class_quick_compiled);
     art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry);
 
     // Enter the instrument gadget composer.
-    jmethodID meth_id = reinterpret_cast<jmethodID>(eax);
-    g_ref_class_loader = ref_obj;
+    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
+    g_ref_class_loader = ref_receiver;
     g_meth_load_class = meth_id;
-    InstrumentGadgetComposer composer(env, ref_obj, meth_id);
+    InstrumentGadgetComposer composer(env, ref_receiver, meth_id);
     composer.Compose();
 
     // Let "loadClass()" finish its original task. The "android.app.Application"
     // will be returned.
-    jobject ref_clazz = env->CallObjectMethod(ref_obj, meth_id, ref_arg_first);
+    jobject ref_clazz = env->CallObjectMethod(ref_receiver, meth_id, ref_arg_first);
     CHK_EXCP(env, exit(EXIT_FAILURE));
 
     // Use the reference key to resolve the actual object.
     void* clazz = DecodeJObject(thread, ref_clazz);
 
     // Remove the relevant entries of the local indirect reference table.
-    RemoveIndirectReference(ref_table, cookie, ref_obj);
+    RemoveIndirectReference(ref_table, cookie, ref_receiver);
     RemoveIndirectReference(ref_table, cookie, ref_arg_first);
-    RemoveIndirectReference(ref_table, cookie, ref_clazz);
 
     CAT(INFO) << StringPrintf("Gadget Deployment Success.");
     return clazz;

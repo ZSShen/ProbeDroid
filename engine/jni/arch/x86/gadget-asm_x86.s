@@ -69,8 +69,8 @@ SetFuncDeliverException:
 .type ComposeInstrumentGadgetTrampoline, @function
 ComposeInstrumentGadgetTrampoline:
     push %edx               # The first argument
-    push %eax               # The ArtMethod* pointer
     push %ecx               # The receiver pointer
+    push %eax               # The ArtMethod* pointer
     call ComposeInstrumentGadget
     addl $12, %esp
     ret
