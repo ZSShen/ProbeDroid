@@ -27,6 +27,7 @@ LOCAL_SRC_FILES         :=  ../../common/libffi/src/debug.c \
                             gadget_common.cc \
                             boot.cc \
                             signature.cc \
+                            java_type.cc \
                             ./bridge/org_probedroid_Instrument.cc \
 
 ifeq ($(TARGET_ARCH),arm)

@@ -180,73 +180,6 @@ class MethodBundleNative
     std::mutex mutex_;
 };
 
-class PrimitiveTypeWrapper
-{
-  public:
-    PrimitiveTypeWrapper(jclass clazz, jmethodID meth_ctor, jmethodID meth_access)
-     : clazz_(clazz),
-       meth_ctor_(meth_ctor),
-       meth_access_(meth_access)
-    {}
-
-    ~PrimitiveTypeWrapper();
-
-    jclass GetClass()
-    {
-        return clazz_;
-    }
-
-    jmethodID GetConstructor()
-    {
-        return meth_ctor_;
-    }
-
-    jmethodID GetAccessor()
-    {
-        return meth_access_;
-    }
-
-    static bool LoadWrappers(JNIEnv*);
-
-  private:
-    jclass clazz_;
-    jmethodID meth_ctor_;
-    jmethodID meth_access_;
-};
-
-class ClassCache
-{
-  public:
-    ClassCache(jclass clazz)
-     : clazz_(clazz),
-       map_meth_()
-    {}
-
-    ~ClassCache();
-
-    jclass GetClass()
-    {
-        return clazz_;
-    }
-
-    void CacheMethod(const std::string& signature, jmethodID meth)
-    {
-        map_meth_.insert(std::make_pair(signature, meth));
-    }
-
-    jmethodID GetCachedMethod(const std::string& signature)
-    {
-        auto iter = map_meth_.find(signature);
-        return (iter != map_meth_.end())? iter->second : 0;
-    }
-
-    static bool LoadClasses(JNIEnv*);
-
-  private:
-    jclass clazz_;
-    std::unordered_map<std::string, jmethodID> map_meth_;
-};
-
 class MarshallingYard
 {
   public:
@@ -404,15 +337,5 @@ typedef std::unique_ptr<std::unordered_map<jmethodID, std::unique_ptr<MethodBund
         PtrBundleMap;
 extern PtrBundleMap g_map_method_bundle;
 
-// The global map to cache the access information about all the wrappers of
-// primitive Java types.
-typedef std::unique_ptr<std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>>
-        PtrPrimitiveMap;
-extern PtrPrimitiveMap g_map_primitive_wrapper;
-
-// The global map to cache the frequently used classes and method ids.
-typedef std::unique_ptr<std::unordered_map<std::string, std::unique_ptr<ClassCache>>>
-        PtrClassMap;
-extern PtrClassMap g_map_class_cache;
 
 #endif

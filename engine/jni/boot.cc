@@ -37,6 +37,7 @@
 #include "logcat.h"
 #include "gadget.h"
 #include "signature.h"
+#include "java_type.h"
 #include "mirror/art_method-inl.h"
 #include "jni_except-inl.h"
 
