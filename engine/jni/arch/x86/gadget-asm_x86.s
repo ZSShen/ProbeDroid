@@ -31,24 +31,6 @@
 #--------------------------------------------------------------------------#
 #                       Utility Gadget Implementation                      #
 #--------------------------------------------------------------------------#
-.global GetJniEnv
-.type GetJniEnv, @function
-GetJniEnv:
-    push %ebp
-    movl %esp, %ebp
-    pusha
-    pushf
-
-    movl 8(%ebp), %esi
-    movl %fs:TLS_OFST_JNIENVEXT, %eax
-    movl %eax, (%esi)
-
-    popf
-    popa
-    leave
-    ret
-
-
 .global GetFuncDeliverException
 .type GetFuncDeliverException, @function
 GetFuncDeliverException:

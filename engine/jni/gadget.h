@@ -297,9 +297,6 @@ class MarshallingYard
 };
 
 
-// The gadget to extract JNI handle from TLS.
-extern "C" void GetJniEnv(JNIEnv**) __asm__("GetJniEnv");
-
 // The gadget to extract the function pointer to art_quick_deliver_exception.
 extern "C" void GetFuncDeliverException(void**) __asm__("GetFuncDeliverException");
 

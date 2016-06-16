@@ -31,11 +31,6 @@
 #--------------------------------------------------------------------------#
 #                       Utility Gadget Implementation                      #
 #--------------------------------------------------------------------------#
-.global GetJniEnv
-GetJniEnv:
-    bx  lr
-
-
 .global GetFuncDeliverException
 GetFuncDeliverException:
     bx  lr
