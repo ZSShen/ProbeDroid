@@ -297,35 +297,36 @@ class MarshallingYard
 };
 
 
-// The gadget to extract the function pointer to art_quick_deliver_exception.
-extern "C" void GetFuncDeliverException(void**) __asm__("GetFuncDeliverException");
-
-// The gadget to replace the function pointer to art_quick_deliver_exception.
-extern "C" void SetFuncDeliverException(void*) __asm__("SetFuncDeliverException");
+// The gadget to acquire the Java VM handle.
+extern "C" jint GetCreatedJavaVMs(JavaVM**, jsize, jsize*);
 
 // The gadget to insert an object into the designated indirect reference table.
 // Note that the first argument is the pointer to art::IndirectReferenceTable.
-extern "C" jobject AddIndirectReference(void*, uint32_t, void*)
-                                        __asm__("AddIndirectReference");
+extern "C" jobject AddIndirectReference(IndirectReferenceTable*, uint32_t, void*);
 
 // The gadget to remove a reference from the designated indirect reference table.
 // Note that the first argument is the pointer to art::IndirectReferenceTable.
-extern "C" bool RemoveIndirectReference(void*, uint32_t, jobject)
-                                        __asm__("RemoveIndirectReference");
+extern "C" bool RemoveIndirectReference(IndirectReferenceTable*, uint32_t, jobject);
 
 // The gadget to decode the given indirect reference.
 // Note that the first argument is the pointer to art::Thread.
-extern "C" void* DecodeJObject(void*, jobject) __asm__("DecodeJObject");
-
-// The trampoline to the function to set instrument gadget composer.
-extern "C" void* ComposeInstrumentGadgetTrampoline()
-                                        __asm__("ComposeInstrumentGadgetTrampoline");
+extern "C" void* DecodeJObject(void*, jobject);
 
 // The gadget to silence the Runtime stack trace for exception object creation.
 extern "C" void CloseRuntimeStackTrace();
 
 // The gadget to restore the Runtime stack trace for exception object creation.
 extern "C" void OpenRuntimeStackTrace();
+
+// The gadget to extract the function pointer to art_quick_deliver_exception.
+extern "C" void GetFuncDeliverException(void**) __asm__("GetFuncDeliverException");
+
+// The gadget to replace the function pointer to art_quick_deliver_exception.
+extern "C" void SetFuncDeliverException(void*) __asm__("SetFuncDeliverException");
+
+// The trampoline to the function to set instrument gadget composer.
+extern "C" void* ComposeInstrumentGadgetTrampoline()
+                                        __asm__("ComposeInstrumentGadgetTrampoline");
 
 // The trampoline to the function to marshall the instrument callbacks and the
 // original method call.

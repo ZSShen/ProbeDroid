@@ -23,6 +23,7 @@ LOCAL_SRC_FILES         :=  ../../common/libffi/src/debug.c \
                             ../../common/libffi/src/java_raw_api.c \
                             ../../common/stringprintf.cc \
                             ../../common/logcat.cc \
+                            gadget_art.cc \
                             gadget_common.cc \
                             boot.cc \
                             signature.cc \

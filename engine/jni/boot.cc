@@ -158,9 +158,8 @@ bool Bootstrap::CreateDexPrivateDir()
 
 bool Bootstrap::CacheJVM()
 {
-    using FuncPtr = jint(*)(JavaVM**, jsize, jsize*);
     jsize vm_count;
-    ((FuncPtr)g_get_created_java_vms)(&g_jvm, 1, &vm_count);
+    GetCreatedJavaVMs(&g_jvm, 1, &vm_count);
     return PROC_SUCC;
 }
 

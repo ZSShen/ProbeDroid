@@ -24,7 +24,6 @@
 #--------------------------------------------------------------------------#
 #                            Constant Definition                           #
 #--------------------------------------------------------------------------#
-.equ TLS_OFST_JNIENVEXT, 0x98
 .equ TLS_OFST_DELIVER_EXCEPTION, 0x234
 
 
@@ -38,21 +37,6 @@ GetFuncDeliverException:
 
 .global SetFuncDeliverException
 SetFuncDeliverException:
-    bx  lr
-
-
-.global AddIndirectReference
-AddIndirectReference:
-    bx  lr
-
-
-.global RemoveIndirectReference
-RemoveIndirectReference:
-    bx  lr
-
-
-.global DecodeJObject
-DecodeJObject:
     bx  lr
 
 
