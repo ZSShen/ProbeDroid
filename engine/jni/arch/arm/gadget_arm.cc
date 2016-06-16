@@ -33,11 +33,6 @@
 #include "jni_except-inl.h"
 
 
-void* ComposeInstrumentGadget(void *r1, void *r0, void *r2)
-{
-    return nullptr;
-}
-
 void ArtQuickInstrument(void** ret_format, void** ret_value, void* r1, void* r0,
                         void* r2, void* r3, void** stack)
 {
