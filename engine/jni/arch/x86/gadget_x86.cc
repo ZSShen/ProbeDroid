@@ -44,27 +44,6 @@ uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord] =
     };
 
 
-void ArtQuickInstrument(void** ret_format, void** ret_value, void* ecx, void* eax,
-                        void* edx, void* ebx, void** stack)
-{
-    JNIEnv* env;
-    g_jvm->AttachCurrentThread(&env, nullptr);
-
-    // Use the method id as the key to retrieve the native method bundle.
-    jmethodID meth_id = reinterpret_cast<jmethodID>(eax);
-    auto iter = g_map_method_bundle->find(meth_id);
-    std::unique_ptr<MethodBundleNative>& bundle_native = iter->second;
-
-    // Create the gadgets to extract input arguments and to inject output value
-    // with machine specific calling convention.
-    InputMarshaller input_marshaller(ecx, eax, ebx, edx, stack);
-    OutputMarshaller output_marshaller(ret_format, ret_value);
-
-    // The main process to marshall instrument callbacks.
-    MarshallingYard yard(env, bundle_native.get(), input_marshaller, output_marshaller);
-    yard.Launch();
-}
-
 void CloseRuntimeStackTrace()
 {
     uint8_t* ptr = reinterpret_cast<uint8_t*>(g_create_internal_stack_trace);

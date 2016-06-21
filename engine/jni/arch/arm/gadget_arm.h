@@ -48,11 +48,12 @@
 class InputMarshaller
 {
   public:
-    InputMarshaller(void* r1, void* r0, void* r2, void* r3, void** stack)
-      : r1_(r1),
-        r0_(r0),
+    InputMarshaller(void* r0, void* r1, void* r2, void* r3, void** stack)
+      : r0_(r0),
+        r1_(r1),
         r2_(r2),
-        r3_(r3)
+        r3_(r3),
+        stack_(stack + kStackAlignment)
     {}
 
     void Extract(const std::vector<char>& input_type, void**);
@@ -68,9 +69,10 @@ class InputMarshaller
     }
 
   private:
+    static const constexpr int32_t kStackAlignment = 4;
 
-    void* r1_;
     void* r0_;
+    void* r1_;
     void* r2_;
     void* r3_;
     void** stack_;

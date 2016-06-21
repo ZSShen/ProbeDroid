@@ -83,11 +83,6 @@ jmp_buf g_save_ptr;
 PtrBundleMap g_map_method_bundle(nullptr);
 
 
-void ArtQuickDeliverException(void* throwable)
-{
-    longjmp(g_save_ptr, 1);
-}
-
 void* ComposeInstrumentGadget(void *meth, void *receiver, void *arg_first)
 {
     JNIEnv* env;
@@ -134,6 +129,33 @@ void* ComposeInstrumentGadget(void *meth, void *receiver, void *arg_first)
     CAT(INFO) << StringPrintf("Gadget Deployment Success.");
     return clazz;
 }
+
+void ArtQuickInstrument(void** ret_format, void** ret_value, void* meth, void* receiver,
+                        void* first_arg, void* second_arg, void** stack)
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+
+    // Use the method id as the key to retrieve the native method bundle.
+    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
+    auto iter = g_map_method_bundle->find(meth_id);
+    std::unique_ptr<MethodBundleNative>& bundle_native = iter->second;
+
+    // Create the gadgets to extract input arguments and to inject output value
+    // with machine specific calling convention.
+    InputMarshaller input_marshaller(meth, receiver, first_arg, second_arg, stack);
+    OutputMarshaller output_marshaller(ret_format, ret_value);
+
+    // The main process to marshall instrument callbacks.
+    MarshallingYard yard(env, bundle_native.get(), input_marshaller, output_marshaller);
+    yard.Launch();
+}
+
+void ArtQuickDeliverException(void* throwable)
+{
+    longjmp(g_save_ptr, 1);
+}
+
 
 void InstrumentGadgetComposer::Compose()
 {

@@ -38,11 +38,11 @@
 class InputMarshaller
 {
   public:
-    InputMarshaller(void* ecx, void* eax, void* ebx, void* edx, void** stack)
-      : ecx_(ecx),
-        eax_(eax),
-        ebx_(ebx),
+    InputMarshaller(void* eax, void* ecx, void* edx, void* ebx, void** stack)
+      : eax_(eax),
+        ecx_(ecx),
         edx_(edx),
+        ebx_(ebx),
         stack_(stack + kStackAlignment)
     {}
 
@@ -61,8 +61,8 @@ class InputMarshaller
   private:
     static const constexpr int32_t kStackAlignment = 5 + 3 + 1;
 
-    void* ecx_;
     void* eax_;
+    void* ecx_;
     void* edx_;
     void* ebx_;
     void** stack_;

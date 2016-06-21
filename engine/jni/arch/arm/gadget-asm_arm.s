@@ -32,11 +32,15 @@
 #--------------------------------------------------------------------------#
 .global GetFuncDeliverException
 GetFuncDeliverException:
+    ldr r1, [r9, #TLS_OFST_DELIVER_EXCEPTION]
+    str r1, [r0]
     bx  lr
 
 
 .global SetFuncDeliverException
 SetFuncDeliverException:
+    ldr r1, [r0]
+    str r1, [r9, #TLS_OFST_DELIVER_EXCEPTION]
     bx  lr
 
 
@@ -53,9 +57,48 @@ ComposeInstrumentGadgetTrampoline:
 
 .global ArtQuickInstrumentTrampoline
 ArtQuickInstrumentTrampoline:
+    push {r0, r1, r2, r3, lr}
+    sub sp, sp, #24
+
+    @ Craft the first argument.
+    ldr r0, [sp, #32]
+    str r0, [sp, #0]
+
+    @ Craft the second argument.
+    ldr r0, [sp, #36]
+    str r0, [sp, #4]
+
+    @ Craft the stack pointer.
+    add r0, sp, #44
+    str r0, [sp, #8]
+
+    @ Craft the return data type.
+    add r0, sp, #12
+
+    @ Craft the return value.
+    add r1, sp, #16
+
+    @ Craft the ArtMethod* pointer.
+    ldr r2, [sp, #24]
+
+    @ Craft the receiver pointer.
+    ldr r3, [sp, #28]
+
+    bl ArtQuickInstrument
+
+    @ Store the return value in the r0/r1 register pair.
+    ldrd r0, r1, [sp, #16]
+
+    @ Restore the stack layout.
+    add sp, sp, #40
+    pop {lr}
+
     bx  lr
 
 
 .global ArtQuickDeliverExceptionTrampoline
 ArtQuickDeliverExceptionTrampoline:
+    push {lr}
+    bl ArtQuickDeliverException
+    pop {lr}
     bx  lr

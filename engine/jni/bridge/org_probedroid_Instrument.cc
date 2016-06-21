@@ -78,7 +78,7 @@ JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     void* except_hooked = reinterpret_cast<void*>(ArtQuickDeliverExceptionTrampoline);
     SetFuncDeliverException(except_hooked);
 
-    // Try to the hosting class of the to be instrumented method.
+    // Try to resolve the definition class of the to be instrumented method.
     if (setjmp(g_save_ptr) != 0) {
         SetFuncDeliverException(except_original);
         return org_probedroid_Instrument_ERR_CLASS_NOT_FOUND;

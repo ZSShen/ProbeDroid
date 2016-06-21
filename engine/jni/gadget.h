@@ -324,8 +324,13 @@ extern jmethodID g_meth_load_class;
 extern thread_local uint32_t g_entrant_count;
 
 // The buffer to cache the prologue of Thread::CreateInternalStackTrace.
-extern uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
-extern uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord];
+#if defined(__arm__)
+    extern uint8_t g_prologue_original_stack_trace[kCacheSizeQWord];
+    extern uint8_t g_prologue_hooked_stack_trace[kCacheSizeQWord];
+#else
+    extern uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
+    extern uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord];
+#endif
 
 // The check point for exception restore when ProbeDroid native invoke JNI
 // function which may fail and throw exception.

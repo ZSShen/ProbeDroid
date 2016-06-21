@@ -88,12 +88,13 @@ ArtQuickInstrumentTrampoline:
                             # %esp + 5 + 3 + 1 to retrieve the passed arguments.)
     push %ebx               # The second argument
     push %edx               # The first argument
-    push %eax               # The ArtMethod* pointer
     push %ecx               # The receiver pointer
+    push %eax               # The ArtMethod* pointer
 
     movl %esp, %esi         # Pass the address of the first QWORD which should
     addl $20, %esi          # be updated with the return value.
     push %esi
+
 
     addl $8, %esi           # Pass the address of the second DOWRD which should
     push %esi               # be updated with the data type of the return value.
