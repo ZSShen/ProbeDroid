@@ -21,8 +21,18 @@
  *   IN THE SOFTWARE.
  */
 
-#ifndef _GADGET_X86_H_
-#define _GADGET_X86_H_
+#ifndef _GADGET_ARM_H_
+#define _GADGET_ARM_H_
+
+
+#include <cstdint>
+#include <vector>
+#include <memory>
+#include <jni.h>
+
+#include "indirect_reference_table.h"
+#include "jni_internal.h"
+#include "ffi.h"
 
 
 #include <cstdint>
@@ -38,11 +48,11 @@
 class InputMarshaller
 {
   public:
-    InputMarshaller(void* eax, void* ecx, void* edx, void* ebx, void** stack)
-      : eax_(eax),
-        ecx_(ecx),
-        edx_(edx),
-        ebx_(ebx),
+    InputMarshaller(void* r0, void* r1, void* r2, void* r3, void** stack)
+      : r0_(r0),
+        r1_(r1),
+        r2_(r2),
+        r3_(r3),
         stack_(stack + kStackAlignment)
     {}
 
@@ -50,21 +60,21 @@ class InputMarshaller
 
     void* GetReceiver()
     {
-        return ecx_;
+        return r1_;
     }
 
     jmethodID GetMethodID()
     {
-        return reinterpret_cast<jmethodID>(eax_);
+        return reinterpret_cast<jmethodID>(r0_);
     }
 
   private:
-    static const constexpr int32_t kStackAlignment = 5 + 3 + 1;
+    static const constexpr int32_t kStackAlignment = 4;
 
-    void* eax_;
-    void* ecx_;
-    void* edx_;
-    void* ebx_;
+    void* r0_;
+    void* r1_;
+    void* r2_;
+    void* r3_;
     void** stack_;
 };
 

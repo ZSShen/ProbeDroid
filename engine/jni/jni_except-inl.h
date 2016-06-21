@@ -25,6 +25,7 @@
 
 #include "jni_except.h"
 #include "logcat.h"
+#include "java_type.h"
 #include "signature.h"
 #include "globals.h"
 #include "stringprintf.h"

@@ -37,6 +37,7 @@
 #include "logcat.h"
 #include "gadget.h"
 #include "signature.h"
+#include "java_type.h"
 #include "mirror/art_method-inl.h"
 #include "jni_except-inl.h"
 
@@ -158,11 +159,9 @@ bool Bootstrap::CreateDexPrivateDir()
 
 bool Bootstrap::CacheJVM()
 {
-    JNIEnv *env;
-    // Apply the manually crafted assembly gadget to get the JNIEnv* handle.
-    GetJniEnv(&env);
-    // Apply the Android JNI to get the JVM handle.
-    return (env->GetJavaVM(&g_jvm) == JNI_OK)? PROC_SUCC : PROC_FAIL;
+    jsize vm_count;
+    GetCreatedJavaVMs(&g_jvm, 1, &vm_count);
+    return PROC_SUCC;
 }
 
 bool Bootstrap::CacheHotJavaTypes()
@@ -378,6 +377,11 @@ bool Bootstrap::ResolveArtSymbol()
     if (!handle_.get())
         return PROC_FAIL;
 
+    // The function to acquire Java VM handle.
+    g_get_created_java_vms = handle_.resolve(kGetCreatedJavaVMs);
+    if (!g_get_created_java_vms)
+        return PROC_FAIL;
+
     // The functions to handle local garbage collection.
     g_indirect_reference_table_add = handle_.resolve(kIndirectReferneceTableAdd);
     if (!g_indirect_reference_table_add)
@@ -458,6 +462,13 @@ void __attribute__((constructor)) BootEntry()
     if (bootstrap.CreateDexPrivateDir() != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Create APK installation directory.");
 
+    // Resolve the entry points of some critical libart functions which would be
+    // used for native code garbage collection and exception handling.
+    if (bootstrap.ResolveArtSymbol() != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Resolve libart symbols.");
+    if (bootstrap.OpenMemoryPermission() != PROC_SUCC)
+        CAT(FATAL) << StringPrintf("Change libart access permission.");
+
     // Retrieve the JVM handle which is necessary for the JNI interaction later.
     if (bootstrap.CacheJVM() != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Cache JVM handle.");
@@ -477,13 +488,6 @@ void __attribute__((constructor)) BootEntry()
     thread.join();
     if (future.get() != PROC_SUCC)
         CAT(FATAL) << StringPrintf("Install and load instrument APK.");
-
-    // Resolve the entry points of some critical libart functions which would be
-    // used for native code garbage collection and exception handling.
-    if (bootstrap.ResolveArtSymbol() != PROC_SUCC)
-        CAT(FATAL) << StringPrintf("Resolve libart symbols.");
-    if (bootstrap.OpenMemoryPermission() != PROC_SUCC)
-        CAT(FATAL) << StringPrintf("Change libart access permission.");
 
     // Deploy the hooking gadget composer and finish the bootstrap process.
     // The control flow of the instrumented application will be diverted to

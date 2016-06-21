@@ -43,6 +43,9 @@ char* g_class_name;
 // The cached Java VM handle.
 JavaVM* g_jvm;
 
+// The original entry to JNI_GetCreatedJavaVMs.
+void* g_get_created_java_vms;
+
 // The original entry to IndirectReferenceTable::Add().
 void* g_indirect_reference_table_add;
 
@@ -71,14 +74,6 @@ jmethodID g_meth_load_class;
 // The reentrant counter to avoid hook loop.
 thread_local uint32_t g_entrant_count = 0;
 
-// The buffer to cache the prologue of Thread::CreateInternalStackTrace.
-uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
-uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord] =
-    {   0x31, 0xc0, // xor %eax, %eax
-        0xc3,       // ret
-        0x90        // nop
-    };
-
 // The check point for exception restore when ProbeDroid native invoke JNI
 // function which may fail and throw exception.
 jmp_buf g_save_ptr;
@@ -87,12 +82,79 @@ jmp_buf g_save_ptr;
 // of the target app.
 PtrBundleMap g_map_method_bundle(nullptr);
 
-// The global map to cache the access information about all the wrappers of
-// primitive Java types.
-PtrPrimitiveMap g_map_primitive_wrapper(nullptr);
 
-// The global map to cache the frequently used method ids.
-PtrClassMap g_map_class_cache(nullptr);
+void* ComposeInstrumentGadget(void *meth, void *receiver, void *arg_first)
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+
+    // Cast JNIEnv* to JNIEnvExt* which is the real data type of JNI handle.
+    JNIEnvExt* env_ext = reinterpret_cast<JNIEnvExt*>(env);
+
+    // Resolve some important members of JNIEnvExt for resource management.
+    uint32_t cookie = env_ext->local_ref_cookie_;
+    IndirectReferenceTable* ref_table = reinterpret_cast<IndirectReferenceTable*>
+                                        (&(env_ext->local_refs_table_));
+    void* thread = env_ext->thread_;
+
+    // Insert the receiver and the first argument into the local indirect
+    // reference table, and the reference key is returned.
+    jobject ref_receiver = AddIndirectReference(ref_table, cookie, receiver);
+    jobject ref_arg_first = AddIndirectReference(ref_table, cookie, arg_first);
+
+    // Restore the entry point to the quick compiled code of "loadClass()".
+    art::ArtMethod* art_meth = reinterpret_cast<art::ArtMethod*>(meth);
+    uint64_t entry = reinterpret_cast<uint64_t>(g_load_class_quick_compiled);
+    art::ArtMethod::SetEntryPointFromQuickCompiledCode(art_meth, entry);
+
+    // Enter the instrument gadget composer.
+    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
+    g_ref_class_loader = ref_receiver;
+    g_meth_load_class = meth_id;
+    InstrumentGadgetComposer composer(env, ref_receiver, meth_id);
+    composer.Compose();
+
+    // Let "loadClass()" finish its original task. The "android.app.Application"
+    // will be returned.
+    jobject ref_clazz = env->CallObjectMethod(ref_receiver, meth_id, ref_arg_first);
+    CHK_EXCP(env, exit(EXIT_FAILURE));
+
+    // Use the reference key to resolve the actual object.
+    void* clazz = DecodeJObject(thread, ref_clazz);
+
+    // Remove the relevant entries of the local indirect reference table.
+    RemoveIndirectReference(ref_table, cookie, ref_receiver);
+    RemoveIndirectReference(ref_table, cookie, ref_arg_first);
+
+    CAT(INFO) << StringPrintf("Gadget Deployment Success.");
+    return clazz;
+}
+
+void ArtQuickInstrument(void** ret_format, void** ret_value, void* meth, void* receiver,
+                        void* first_arg, void* second_arg, void** stack)
+{
+    JNIEnv* env;
+    g_jvm->AttachCurrentThread(&env, nullptr);
+
+    // Use the method id as the key to retrieve the native method bundle.
+    jmethodID meth_id = reinterpret_cast<jmethodID>(meth);
+    auto iter = g_map_method_bundle->find(meth_id);
+    std::unique_ptr<MethodBundleNative>& bundle_native = iter->second;
+
+    // Create the gadgets to extract input arguments and to inject output value
+    // with machine specific calling convention.
+    InputMarshaller input_marshaller(meth, receiver, first_arg, second_arg, stack);
+    OutputMarshaller output_marshaller(ret_format, ret_value);
+
+    // The main process to marshall instrument callbacks.
+    MarshallingYard yard(env, bundle_native.get(), input_marshaller, output_marshaller);
+    yard.Launch();
+}
+
+void ArtQuickDeliverException(void* throwable)
+{
+    longjmp(g_save_ptr, 1);
+}
 
 
 void InstrumentGadgetComposer::Compose()
@@ -187,348 +249,6 @@ MethodBundleNative::~MethodBundleNative()
     g_jvm->AttachCurrentThread(&env, nullptr);
     env->DeleteGlobalRef(clazz_);
     env->DeleteGlobalRef(bundle_);
-}
-
-PrimitiveTypeWrapper::~PrimitiveTypeWrapper()
-{
-    JNIEnv* env;
-    g_jvm->AttachCurrentThread(&env, nullptr);
-    env->DeleteGlobalRef(clazz_);
-}
-
-bool PrimitiveTypeWrapper::LoadWrappers(JNIEnv* env)
-{
-    // Load Boolean wrapper.
-    char sig[kBlahSizeMid];
-    jclass clazz = env->FindClass(kNormBooleanObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigBoolean, kSigVoid);
-    jmethodID meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigBoolean);
-    jmethodID meth_access = env->GetMethodID(clazz, kFuncBooleanValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Boolean class.");
-        return PROC_FAIL;
-    }
-    jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-    PrimitiveTypeWrapper* wrapper = new(std::nothrow) PrimitiveTypeWrapper(
-                                        g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Boolean.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeBoolean,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    // Load Byte Wrapper.
-    clazz = env->FindClass(kNormByteObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigByte, kSigVoid);
-    meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigByte);
-    meth_access = env->GetMethodID(clazz, kFuncByteValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Byte class.");
-        return PROC_FAIL;
-    }
-    g_clazz = reinterpret_cast<jclass>(g_ref);
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Byte.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeByte,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    // Load Character Wrapper.
-    clazz = env->FindClass(kNormCharObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigChar, kSigVoid);
-    meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigChar);
-    meth_access = env->GetMethodID(clazz, kFuncCharValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Character class.");
-        return PROC_FAIL;
-    }
-    g_clazz = reinterpret_cast<jclass>(g_ref);
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Character.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeChar,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    // Load Short Wrapper.
-    clazz = env->FindClass(kNormShortObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigShort, kSigVoid);
-    meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigShort);
-    meth_access = env->GetMethodID(clazz, kFuncShortValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Short class.");
-        return PROC_FAIL;
-    }
-    g_clazz = reinterpret_cast<jclass>(g_ref);
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Short.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeShort,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    // Load Integer Wrapper.
-    clazz = env->FindClass(kNormIntObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigInt, kSigVoid);
-    meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigInt);
-    meth_access = env->GetMethodID(clazz, kFuncIntValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Integer class.");
-        return PROC_FAIL;
-    }
-    g_clazz = reinterpret_cast<jclass>(g_ref);
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Integer.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeInt,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    // Load Float Wrapper.
-    clazz = env->FindClass(kNormFloatObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigFloat, kSigVoid);
-    meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigFloat);
-    meth_access = env->GetMethodID(clazz, kFuncFloatValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Float class.");
-        return PROC_FAIL;
-    }
-    g_clazz = reinterpret_cast<jclass>(g_ref);
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Float.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeFloat,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    // Load Long Wrapper.
-    clazz = env->FindClass(kNormLongObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigLong, kSigVoid);
-    meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigLong);
-    meth_access = env->GetMethodID(clazz, kFuncLongValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Long class.");
-        return PROC_FAIL;
-    }
-    g_clazz = reinterpret_cast<jclass>(g_ref);
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Long.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeLong,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    // Load Double Wrapper.
-    clazz = env->FindClass(kNormDoubleObject);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "(%c)%c", kSigDouble, kSigVoid);
-    meth_ctor = env->GetMethodID(clazz, kFuncConstructor, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    snprintf(sig, kBlahSizeMid, "()%c", kSigDouble);
-    meth_access = env->GetMethodID(clazz, kFuncDoubleValue, sig);
-    CHK_EXCP_AND_RET_FAIL(env);
-
-    g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-    if (!g_ref) {
-        CAT(ERROR) << StringPrintf("Allocate a global reference for Double class.");
-        return PROC_FAIL;
-    }
-    g_clazz = reinterpret_cast<jclass>(g_ref);
-    wrapper = new(std::nothrow) PrimitiveTypeWrapper(g_clazz, meth_ctor, meth_access);
-    if (!wrapper) {
-        CAT(ERROR) << StringPrintf("Allocate PrimitiveTypeWrapper for Double.");
-        return PROC_FAIL;
-    }
-    g_map_primitive_wrapper->insert(std::make_pair(kTypeDouble,
-                               std::unique_ptr<PrimitiveTypeWrapper>(wrapper)));
-
-    return PROC_SUCC;
-}
-
-ClassCache::~ClassCache()
-{
-    JNIEnv* env;
-    g_jvm->AttachCurrentThread(&env, nullptr);
-    env->DeleteGlobalRef(clazz_);
-}
-
-bool ClassCache::LoadClasses(JNIEnv* env)
-{
-    char sig[kBlahSizeMid];
-    // Load "java.lang.Object".
-    {
-        jclass clazz = env->FindClass(kNormObject);
-        CHK_EXCP_AND_RET_FAIL(env);
-
-        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-        if (!g_ref) {
-            CAT(ERROR) << StringPrintf("Allocate a global reference for Object class.");
-            return PROC_FAIL;
-        }
-
-        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
-        if (!class_cache) {
-            CAT(ERROR) << StringPrintf("Allocate ClassCache for Object.");
-            return PROC_FAIL;
-        }
-
-        // Load "String Object.toString()".
-        {
-            snprintf(sig, kBlahSizeMid, "()%s", kSigString);
-            jmethodID meth = env->GetMethodID(clazz, kFuncToString, sig);
-            CHK_EXCP_AND_RET_FAIL(env);
-
-            snprintf(sig, kBlahSizeMid, "%s()%s", kFuncToString, kSigString);
-            std::string sig_method(sig);
-            class_cache->CacheMethod(sig_method, meth);
-        }
-        std::string sig_class(kNormObject);
-        g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache)));
-    }
-
-    // Load "java.lang.IllegalArgumentException".
-    {
-        jclass clazz = env->FindClass(kNormIllegalArgument);
-        CHK_EXCP_AND_RET_FAIL(env);
-
-        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-        if (!g_ref) {
-            CAT(ERROR) << StringPrintf("Allocate a global reference for "
-                                        "IllegalArgumentException class.");
-            return PROC_FAIL;
-        }
-
-        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
-        if (!class_cache) {
-            CAT(ERROR) << StringPrintf("Allocate ClassCache for IllegalArgumentException.");
-            return PROC_FAIL;
-        }
-        std::string sig_class(kNormIllegalArgument);
-        g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache)));
-    }
-
-    // Load "java.lang.ClassNotFoundException".
-    {
-        jclass clazz = env->FindClass(kNormClassNotFound);
-        CHK_EXCP_AND_RET_FAIL(env);
-
-        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-        if (!g_ref) {
-            CAT(ERROR) << StringPrintf("Allocate a global reference for "
-                                        "ClassNotFoundException class.");
-            return PROC_FAIL;
-        }
-
-        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        ClassCache* class_cache = new(std::nothrow) ClassCache(g_clazz);
-        if (!class_cache) {
-            CAT(ERROR) << StringPrintf("Allocate ClassCache for ClassNotFoundException.");
-            return PROC_FAIL;
-        }
-        std::string sig_class(kNormClassNotFound);
-        g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache)));
-    }
-
-    // Load "java.lang.NoSuchMethodException".
-    {
-        jclass clazz = env->FindClass(kNormNoSuchMethod);
-        CHK_EXCP_AND_RET_FAIL(env);
-
-        jobject g_ref = env->NewGlobalRef(reinterpret_cast<jobject>(clazz));
-        if (!g_ref) {
-            CAT(ERROR) << StringPrintf("Allocate a global reference for "
-                                        "NoSuchMethodException class.");
-            return PROC_FAIL;
-        }
-
-        jclass g_clazz = reinterpret_cast<jclass>(g_ref);
-        ClassCache* class_cache = new(std::nothrow)ClassCache(g_clazz);
-        if (!class_cache) {
-            CAT(ERROR) << StringPrintf("Allocate ClassCache for NoSuchMethodException.");
-            return PROC_FAIL;
-        }
-        std::string sig_class(kNormNoSuchMethod);
-        g_map_class_cache->insert(std::make_pair(sig_class,
-                            std::unique_ptr<ClassCache>(class_cache)));
-    }
-
-    return PROC_SUCC;
-}
-
-void ArtQuickDeliverException(void* throwable)
-{
-    longjmp(g_save_ptr, 1);
 }
 
 void MarshallingYard::Launch()

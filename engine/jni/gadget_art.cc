@@ -21,66 +21,33 @@
  *   IN THE SOFTWARE.
  */
 
-#ifndef _GADGET_X86_H_
-#define _GADGET_X86_H_
+#include "gadget.h"
 
 
-#include <cstdint>
-#include <vector>
-#include <memory>
-#include <jni.h>
-
-#include "indirect_reference_table.h"
-#include "jni_internal.h"
-#include "ffi.h"
-
-
-class InputMarshaller
+jint GetCreatedJavaVMs(JavaVM** p_jvm, jsize size, jsize* p_count)
 {
-  public:
-    InputMarshaller(void* eax, void* ecx, void* edx, void* ebx, void** stack)
-      : eax_(eax),
-        ecx_(ecx),
-        edx_(edx),
-        ebx_(ebx),
-        stack_(stack + kStackAlignment)
-    {}
+    using ARTFUNC = jint(*)(JavaVM**, jsize, jsize*);
+    return (reinterpret_cast<ARTFUNC>(g_get_created_java_vms))(p_jvm, size, p_count);
+}
 
-    void Extract(const std::vector<char>& input_type, void**);
-
-    void* GetReceiver()
-    {
-        return ecx_;
-    }
-
-    jmethodID GetMethodID()
-    {
-        return reinterpret_cast<jmethodID>(eax_);
-    }
-
-  private:
-    static const constexpr int32_t kStackAlignment = 5 + 3 + 1;
-
-    void* eax_;
-    void* ecx_;
-    void* edx_;
-    void* ebx_;
-    void** stack_;
-};
-
-class OutputMarshaller
+jobject AddIndirectReference(IndirectReferenceTable* ref_table,
+                             uint32_t cookie, void* obj)
 {
-  public:
-    OutputMarshaller(void** ret_format, void** ret_value)
-      : ret_format_(ret_format),
-        ret_value_(ret_value)
-    {}
+    using ARTFUNC = jobject(*)(IndirectReferenceTable*, uint32_t, void*);
+    return (reinterpret_cast<ARTFUNC>(g_indirect_reference_table_add))
+                                     (ref_table, cookie, obj);
+}
 
-    void Inject(char, void**);
+bool RemoveIndirectReference(IndirectReferenceTable* ref_table,
+                             uint32_t cookie, jobject obj_ref)
+{
+    using ARTFUNC = bool(*)(IndirectReferenceTable*, uint32_t, jobject);
+    return (reinterpret_cast<ARTFUNC>(g_indirect_reference_table_remove))
+                                     (ref_table, cookie, obj_ref);
+}
 
-  private:
-    void** ret_format_;
-    void** ret_value_;
-};
-
-#endif
+void* DecodeJObject(void* thread, jobject obj_ref)
+{
+    using ARTFUNC = void*(*)(void*, jobject);
+    return (reinterpret_cast<ARTFUNC>(g_thread_decode_jobject))(thread, obj_ref);
+}

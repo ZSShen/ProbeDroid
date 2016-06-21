@@ -24,7 +24,7 @@
 #include <memory>
 #include <cstdlib>
 
-#include "gadget_x86.h"
+#include "gadget_arm.h"
 #include "gadget.h"
 #include "mirror/art_method-inl.h"
 #include "logcat.h"
@@ -34,36 +34,27 @@
 
 
 // The buffer to cache the prologue of Thread::CreateInternalStackTrace.
-uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
+uint8_t g_prologue_original_stack_trace[kCacheSizeQWord];
 
 // The dummy code to replace the original prologue.
-uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord] =
-    {   0x31, 0xc0, // xor %eax, %eax
-        0xc3,       // ret
-        0x90        // nop
+uint8_t g_prologue_hooked_stack_trace[kCacheSizeQWord] =
+    {
+        0xe3, 0xa0, 0x00, 0x00,     // mov r0, #0
+        0xe1, 0x2f, 0xff, 0x1e      // bx lr
     };
 
 
 void CloseRuntimeStackTrace()
 {
     uint8_t* ptr = reinterpret_cast<uint8_t*>(g_create_internal_stack_trace);
-    g_prologue_original_stack_trace[0] = ptr[0];
-    g_prologue_original_stack_trace[1] = ptr[1];
-    g_prologue_original_stack_trace[2] = ptr[2];
-    g_prologue_original_stack_trace[3] = ptr[3];
-    ptr[0] = g_prologue_hooked_stack_trace[0];
-    ptr[1] = g_prologue_hooked_stack_trace[1];
-    ptr[2] = g_prologue_hooked_stack_trace[2];
-    ptr[3] = g_prologue_hooked_stack_trace[3];
+    memcpy(g_prologue_original_stack_trace, ptr, 8);
+    memcpy(ptr, g_prologue_hooked_stack_trace, 8);
 }
 
 void OpenRuntimeStackTrace()
 {
     uint8_t* ptr = reinterpret_cast<uint8_t*>(g_create_internal_stack_trace);
-    ptr[0] = g_prologue_original_stack_trace[0];
-    ptr[1] = g_prologue_original_stack_trace[1];
-    ptr[2] = g_prologue_original_stack_trace[2];
-    ptr[3] = g_prologue_original_stack_trace[3];
+    memcpy(ptr, g_prologue_original_stack_trace, 8);
 }
 
 void InputMarshaller::Extract(const std::vector<char>& input_type, void** arguments)
@@ -78,9 +69,9 @@ void InputMarshaller::Extract(const std::vector<char>& input_type, void** argume
             case kTypeInt:
             case kTypeObject:
                 if (idx == 0)
-                    *arguments++ = edx_;
+                    *arguments++ = r2_;
                 else if (idx == 1)
-                    *arguments++ = ebx_;
+                    *arguments++ = r3_;
                 else
                     *arguments++ = *stack_++;
                 ++idx;
@@ -89,11 +80,11 @@ void InputMarshaller::Extract(const std::vector<char>& input_type, void** argume
                 void* cast[1];
                 jdouble value;
                 if (idx == 0) {
-                    *cast = edx_;
+                    *cast = r2_;
                     value = *reinterpret_cast<jfloat*>(cast);
                 }
                 else if(idx == 1) {
-                    *cast = ebx_;
+                    *cast = r3_;
                     value = *reinterpret_cast<jfloat*>(cast);
                 }
                 else {
@@ -108,14 +99,15 @@ void InputMarshaller::Extract(const std::vector<char>& input_type, void** argume
             case kTypeLong:
             case kTypeDouble:
                 if (idx == 0) {
-                    *arguments++ = edx_;
-                    *arguments++ = ebx_;
+                    *arguments++ = r3_;
+                    *arguments++ = r2_;
                 } else if (idx == 1) {
-                    *arguments++ = ebx_;
                     *arguments++ = *stack_++;
+                    *arguments++ = r3_;
                 } else {
-                    *arguments++ = *stack_++;
-                    *arguments++ = *stack_++;
+                    *arguments++ = *(++stack_);
+                    *arguments++ = *(stack_ - 1);
+                    ++stack_;
                 }
                 idx += kWidthQword;
                 break;

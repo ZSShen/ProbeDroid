@@ -38,7 +38,11 @@
 #include "globals.h"
 #include "signature.h"
 #include "logcat.h"
-#include "x86/gadget_x86.h"
+#if defined(__arm__)
+    #include "gadget_arm.h"
+#else
+    #include "gadget_x86.h"
+#endif
 #include "ffi.h"
 
 
@@ -176,73 +180,6 @@ class MethodBundleNative
     std::mutex mutex_;
 };
 
-class PrimitiveTypeWrapper
-{
-  public:
-    PrimitiveTypeWrapper(jclass clazz, jmethodID meth_ctor, jmethodID meth_access)
-     : clazz_(clazz),
-       meth_ctor_(meth_ctor),
-       meth_access_(meth_access)
-    {}
-
-    ~PrimitiveTypeWrapper();
-
-    jclass GetClass()
-    {
-        return clazz_;
-    }
-
-    jmethodID GetConstructor()
-    {
-        return meth_ctor_;
-    }
-
-    jmethodID GetAccessor()
-    {
-        return meth_access_;
-    }
-
-    static bool LoadWrappers(JNIEnv*);
-
-  private:
-    jclass clazz_;
-    jmethodID meth_ctor_;
-    jmethodID meth_access_;
-};
-
-class ClassCache
-{
-  public:
-    ClassCache(jclass clazz)
-     : clazz_(clazz),
-       map_meth_()
-    {}
-
-    ~ClassCache();
-
-    jclass GetClass()
-    {
-        return clazz_;
-    }
-
-    void CacheMethod(const std::string& signature, jmethodID meth)
-    {
-        map_meth_.insert(std::make_pair(signature, meth));
-    }
-
-    jmethodID GetCachedMethod(const std::string& signature)
-    {
-        auto iter = map_meth_.find(signature);
-        return (iter != map_meth_.end())? iter->second : 0;
-    }
-
-    static bool LoadClasses(JNIEnv*);
-
-  private:
-    jclass clazz_;
-    std::unordered_map<std::string, jmethodID> map_meth_;
-};
-
 class MarshallingYard
 {
   public:
@@ -293,8 +230,26 @@ class MarshallingYard
 };
 
 
-// The gadget to extract JNI handle from TLS.
-extern "C" void GetJniEnv(JNIEnv**) __asm__("GetJniEnv");
+// The gadget to acquire the Java VM handle.
+extern "C" jint GetCreatedJavaVMs(JavaVM**, jsize, jsize*);
+
+// The gadget to insert an object into the designated indirect reference table.
+// Note that the first argument is the pointer to art::IndirectReferenceTable.
+extern "C" jobject AddIndirectReference(IndirectReferenceTable*, uint32_t, void*);
+
+// The gadget to remove a reference from the designated indirect reference table.
+// Note that the first argument is the pointer to art::IndirectReferenceTable.
+extern "C" bool RemoveIndirectReference(IndirectReferenceTable*, uint32_t, jobject);
+
+// The gadget to decode the given indirect reference.
+// Note that the first argument is the pointer to art::Thread.
+extern "C" void* DecodeJObject(void*, jobject);
+
+// The gadget to silence the Runtime stack trace for exception object creation.
+extern "C" void CloseRuntimeStackTrace();
+
+// The gadget to restore the Runtime stack trace for exception object creation.
+extern "C" void OpenRuntimeStackTrace();
 
 // The gadget to extract the function pointer to art_quick_deliver_exception.
 extern "C" void GetFuncDeliverException(void**) __asm__("GetFuncDeliverException");
@@ -302,29 +257,9 @@ extern "C" void GetFuncDeliverException(void**) __asm__("GetFuncDeliverException
 // The gadget to replace the function pointer to art_quick_deliver_exception.
 extern "C" void SetFuncDeliverException(void*) __asm__("SetFuncDeliverException");
 
-// The gadget to insert an object into the designated indirect reference table.
-// Note that the first argument is the pointer to art::IndirectReferenceTable.
-extern "C" jobject AddIndirectReference(void*, uint32_t, void*)
-                                        __asm__("AddIndirectReference");
-
-// The gadget to remove a reference from the designated indirect reference table.
-// Note that the first argument is the pointer to art::IndirectReferenceTable.
-extern "C" bool RemoveIndirectReference(void*, uint32_t, jobject)
-                                        __asm__("RemoveIndirectReference");
-
-// The gadget to decode the given indirect reference.
-// Note that the first argument is the pointer to art::Thread.
-extern "C" void* DecodeJObject(void*, jobject) __asm__("DecodeJObject");
-
 // The trampoline to the function to set instrument gadget composer.
 extern "C" void* ComposeInstrumentGadgetTrampoline()
                                         __asm__("ComposeInstrumentGadgetTrampoline");
-
-// The gadget to silence the Runtime stack trace for exception object creation.
-extern "C" void CloseRuntimeStackTrace();
-
-// The gadget to restore the Runtime stack trace for exception object creation.
-extern "C" void OpenRuntimeStackTrace();
 
 // The trampoline to the function to marshall the instrument callbacks and the
 // original method call.
@@ -357,6 +292,9 @@ extern char* g_class_name;
 // The cached Java VM handle.
 extern JavaVM* g_jvm;
 
+// The original entry to JNI_GetCreatedJavaVMs.
+extern void* g_get_created_java_vms;
+
 // The original entry to IndirectReferenceTable::Add().
 extern void* g_indirect_reference_table_add;
 
@@ -386,8 +324,13 @@ extern jmethodID g_meth_load_class;
 extern thread_local uint32_t g_entrant_count;
 
 // The buffer to cache the prologue of Thread::CreateInternalStackTrace.
-extern uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
-extern uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord];
+#if defined(__arm__)
+    extern uint8_t g_prologue_original_stack_trace[kCacheSizeQWord];
+    extern uint8_t g_prologue_hooked_stack_trace[kCacheSizeQWord];
+#else
+    extern uint8_t g_prologue_original_stack_trace[kCacheSizeDWord];
+    extern uint8_t g_prologue_hooked_stack_trace[kCacheSizeDWord];
+#endif
 
 // The check point for exception restore when ProbeDroid native invoke JNI
 // function which may fail and throw exception.
@@ -399,15 +342,5 @@ typedef std::unique_ptr<std::unordered_map<jmethodID, std::unique_ptr<MethodBund
         PtrBundleMap;
 extern PtrBundleMap g_map_method_bundle;
 
-// The global map to cache the access information about all the wrappers of
-// primitive Java types.
-typedef std::unique_ptr<std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>>
-        PtrPrimitiveMap;
-extern PtrPrimitiveMap g_map_primitive_wrapper;
-
-// The global map to cache the frequently used classes and method ids.
-typedef std::unique_ptr<std::unordered_map<std::string, std::unique_ptr<ClassCache>>>
-        PtrClassMap;
-extern PtrClassMap g_map_class_cache;
 
 #endif
