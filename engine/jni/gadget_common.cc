@@ -163,8 +163,7 @@ void InstrumentGadgetComposer::Compose()
         CAT(FATAL) << StringPrintf("Link instrument APK.");
 
     // Initialize the global map for method information maintenance.
-    typedef std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>
-            BundleMap;
+    using BundleMap = std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>;
     BundleMap* bundle_map = new(std::nothrow)BundleMap();
     if (!bundle_map)
         CAT(FATAL) << StringPrintf("Allocate map for MethodBundleNative.");
@@ -628,7 +627,7 @@ void MarshallingYard::MakeGenericInput(void** scan, const std::vector<char>& inp
 bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
         char output_type, ffi_type** gen_type, void** gen_value, void** p_result)
 {
-    typedef void (*GENFUNC) ();
+    using GenFunc = void(*)();
     #define FFI_CALL(p_value)                                                       \
     do {                                                                            \
         std::lock_guard<std::mutex> guard(mutex);                                   \
@@ -643,7 +642,7 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
     uint64_t entry_origin = bundle_native_->GetQuickCodeOriginalEntry();
     uint64_t entry_hook = reinterpret_cast<uint64_t>(ArtQuickInstrumentTrampoline);
     ffi_cif cif;
-    GENFUNC func;
+    GenFunc func;
 
     switch (output_type) {
         case kTypeVoid: {
@@ -651,9 +650,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_void, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for no return.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticVoidMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticVoidMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallVoidMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallVoidMethod);
             FFI_CALL(nullptr);
             break;
         }
@@ -662,9 +661,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_uint8, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for boolean returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticBooleanMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticBooleanMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallBooleanMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallBooleanMethod);
             jboolean value;
             FFI_CALL(&value);
             *reinterpret_cast<jboolean*>(p_result) = value;
@@ -675,9 +674,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_sint8, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for byte returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticByteMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticByteMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallByteMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallByteMethod);
             jbyte value;
             FFI_CALL(&value);
             *reinterpret_cast<jbyte*>(p_result) = value;
@@ -688,9 +687,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_uint16, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for char returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticCharMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticCharMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallCharMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallCharMethod);
             jchar value;
             FFI_CALL(&value);
             *reinterpret_cast<jchar*>(p_result) = value;
@@ -701,9 +700,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_sint16, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for short returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticShortMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticShortMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallShortMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallShortMethod);
             jshort value;
             FFI_CALL(&value);
             *reinterpret_cast<jshort*>(p_result) = value;
@@ -714,9 +713,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_sint32, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for int returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticIntMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticIntMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallIntMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallIntMethod);
             jint value;
             FFI_CALL(&value);
             *reinterpret_cast<jint*>(p_result) = value;
@@ -727,9 +726,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_sint64, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for long returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticLongMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticLongMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallLongMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallLongMethod);
             jlong value;
             FFI_CALL(&value);
             *reinterpret_cast<jlong*>(p_result) = value;
@@ -740,9 +739,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_float, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for float returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticFloatMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticFloatMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallFloatMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallFloatMethod);
             jfloat value;
             FFI_CALL(&value);
             *reinterpret_cast<jfloat*>(p_result) = value;
@@ -753,9 +752,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_double, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for double returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticDoubleMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticDoubleMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallDoubleMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallDoubleMethod);
             jdouble value;
             FFI_CALL(&value);
             *reinterpret_cast<jdouble*>(p_result) = value;
@@ -766,9 +765,9 @@ bool MarshallingYard::InvokeOrigin(int32_t extend_count, jmethodID meth,
                              &ffi_type_pointer, gen_type) != FFI_OK)
                 CAT(ERROR) << StringPrintf("FFI call for object returned.");
             if (is_static)
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallStaticObjectMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallStaticObjectMethod);
             else
-                func = reinterpret_cast<GENFUNC>(env_->functions->CallObjectMethod);
+                func = reinterpret_cast<GenFunc>(env_->functions->CallObjectMethod);
             jobject value;
             FFI_CALL(&value);
             *p_result = DecodeJObject(thread_, value);

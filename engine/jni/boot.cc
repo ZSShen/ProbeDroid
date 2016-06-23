@@ -169,8 +169,9 @@ bool Bootstrap::CacheHotJavaTypes()
     JNIEnv* env;
     g_jvm->AttachCurrentThread(&env, nullptr);
 
-    typedef std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>
-            PrimitiveMap;
+    using PrimitiveMap = std::unordered_map<char, std::unique_ptr<PrimitiveTypeWrapper>>;
+    using ClassMap = std::unordered_map<std::string, std::unique_ptr<ClassCache>>;
+
     PrimitiveMap* primitive_map = new(std::nothrow)PrimitiveMap();
     if (!primitive_map) {
         CAT(ERROR) << StringPrintf("Allocate global map for PrimitiveTypeWrapper.");
@@ -178,8 +179,6 @@ bool Bootstrap::CacheHotJavaTypes()
     }
     g_map_primitive_wrapper.reset(primitive_map);
 
-    typedef std::unordered_map<std::string, std::unique_ptr<ClassCache>>
-            ClassMap;
     ClassMap* class_map = new(std::nothrow)ClassMap();
     if (!class_map) {
         CAT(ERROR) << StringPrintf("Allocate global map for ClassCache.");

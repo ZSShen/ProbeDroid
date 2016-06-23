@@ -30,10 +30,10 @@
 #include "proc.h"
 
 
-static const char* kOptLongAppName = "app";
-static const char* kOptLongLibPath = "lib";
-static const char* kOptLongModulePath = "module";
-static const char* kOptLongClassName = "class";
+static const char* const kOptLongAppName = "app";
+static const char* const kOptLongLibPath = "lib";
+static const char* const kOptLongModulePath = "module";
+static const char* const kOptLongClassName = "class";
 
 static const char kOptAppName = 'a';
 static const char kOptLibPath = 'l';

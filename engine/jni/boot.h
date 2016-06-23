@@ -53,12 +53,12 @@ class Bootstrap
     bool DeployInstrumentGadgetComposer();
 
   private:
-    static constexpr int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
-    static constexpr int kArtCodePerm = PROT_READ | PROT_WRITE | PROT_EXEC;
-    static constexpr const char* kDirDexData = "data";
-    static constexpr const char* kDirInstrument = "instrument";
-    static constexpr const char* kDexFileTemp = "DexFile.dex";
-    static constexpr const char* kPathLibArt = "/system/lib/libart.so";
+    static constexpr const int kPrivateDexPerm = S_IRWXU | S_IRWXG | S_IXOTH;
+    static constexpr const int kArtCodePerm = PROT_READ | PROT_WRITE | PROT_EXEC;
+    static constexpr const char* const kDirDexData = "data";
+    static constexpr const char* const kDirInstrument = "instrument";
+    static constexpr const char* const kDexFileTemp = "DexFile.dex";
+    static constexpr const char* const kPathLibArt = "/system/lib/libart.so";
 
     std::unique_ptr<char> output_path_;
     std::unique_ptr<char> dex_path_;

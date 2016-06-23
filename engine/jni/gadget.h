@@ -214,7 +214,7 @@ class MarshallingYard
     bool InvokeOrigin(int32_t, jmethodID, char, ffi_type**, void**, void**);
 
 
-    static const constexpr int32_t kMinJniArgCount = 3;
+    static constexpr const int32_t kMinJniArgCount = 3;
 
     uint32_t cookie_;
     JNIEnvExt* env_;
@@ -338,8 +338,8 @@ extern jmp_buf g_save_ptr;
 
 // The global map to maintain the information about all the instrumented methods
 // of the target app.
-typedef std::unique_ptr<std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>>
-        PtrBundleMap;
+using PtrBundleMap =
+std::unique_ptr<std::unordered_map<jmethodID, std::unique_ptr<MethodBundleNative>>>;
 extern PtrBundleMap g_map_method_bundle;
 
 

@@ -48,13 +48,13 @@ static const int kCacheSizeQWord = 8;
 
 // Auxiliary symbols for inter-process communication.
 static const char kSignAssign = '=';
-static const char* kKeyPathCoreLibrary = "PATH_LIB";
-static const char* kKeyPathAnalysisModule = "PATH_MODULE";
-static const char* kKeyNameMainClass = "NAME_CLASS";
+static const char* const kKeyPathCoreLibrary = "PATH_LIB";
+static const char* const kKeyPathAnalysisModule = "PATH_MODULE";
+static const char* const kKeyNameMainClass = "NAME_CLASS";
 
 // Auxiliary symbols for memory access permission.
-static const char* kPermReadExec = "r-xp";
-static const char* kPermReadWrteExec = "rwxp";
+static const char* const kPermReadExec = "r-xp";
+static const char* const kPermReadWrteExec = "rwxp";
 
 // Return value to represent if the procedure completes successfully.
 enum {
