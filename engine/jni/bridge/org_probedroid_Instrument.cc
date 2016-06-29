@@ -103,6 +103,7 @@ JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
         meth_tge = env->GetStaticMethodID(clazz, cstr_method_name, cstr_method_sig);
     else
         meth_tge = env->GetMethodID(clazz, cstr_method_name, cstr_method_sig);
+
     if (!meth_tge) {
         env->ExceptionClear();
         SetFuncDeliverException(except_original);
@@ -182,5 +183,6 @@ JNIEXPORT jint JNICALL Java_org_probedroid_Instrument_instrumentMethodNative
     // the target app if it really needs that exception. So we must restore the
     // code to avoid unexpected runtime crash.
     OpenRuntimeStackTrace();
+
     return org_probedroid_Instrument_INSTRUMENT_OK;
 }

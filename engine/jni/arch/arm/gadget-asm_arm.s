@@ -24,6 +24,7 @@
 #--------------------------------------------------------------------------#
 #                            Constant Definition                           #
 #--------------------------------------------------------------------------#
+.equ TLS_POINTER, 0xffff0fe0
 .equ TLS_OFST_DELIVER_EXCEPTION, 0x234
 
 
@@ -39,8 +40,7 @@ GetFuncDeliverException:
 
 .global SetFuncDeliverException
 SetFuncDeliverException:
-    ldr r1, [r0]
-    str r1, [r9, #TLS_OFST_DELIVER_EXCEPTION]
+    str r0, [r9, #TLS_OFST_DELIVER_EXCEPTION]
     bx  lr
 
 
