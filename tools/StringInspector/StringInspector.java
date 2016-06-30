@@ -51,6 +51,23 @@ public class StringInspector extends Instrument {
         try {
             instrumentMethod(false, nameClass, nameMethod, signatureMethod,
                     bundleBuilder);
+        } catch (IllegalArgumentException e) {
+            Log.d(NAME_MODULE, e.toString());
+        } catch (ClassNotFoundException e) {
+            Log.d(NAME_MODULE, e.toString());
+        } catch (NoSuchMethodException e) {
+            Log.d(NAME_MODULE, e.toString());
+        }
+
+        // Monitor strings converted from StringBuffer.
+        nameClass = "java.lang.StringBuffer";
+        nameMethod = "toString";
+        signatureMethod = "()Ljava/lang/String;";
+        ConvertedStringBuffer buildBuffer = new ConvertedStringBuffer(false,
+                true);
+        try {
+            instrumentMethod(false, nameClass, nameMethod, signatureMethod,
+                    buildBuffer);
         } catch (ClassNotFoundException e) {
             Log.d(NAME_MODULE, e.toString());
         } catch (NoSuchMethodException e) {
@@ -65,8 +82,7 @@ public class StringInspector extends Instrument {
         StringBuffer sb = new StringBuffer();
         for (String str : gLogList)
             sb.append(str).append('\n');
-        File file = new File(
-                "/data/data/com.google.android.apps.maps/InstrumentResult.txt");
+        File file = new File(mPathOutputDirectory, "Instrument.log");
         BufferedWriter output = null;
         try {
             output = new BufferedWriter(new FileWriter(file));
