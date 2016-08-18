@@ -3,14 +3,19 @@
 ProbeDroid is a ***dynamic Java code instrumentation kit for Android application***. It provides APIs for users to craft their own instrumentation tools. Thus they can trace, profile, or change the runtime behavior of an interested application. Essentially, ***Java method*** is the ***basic instrumentation unit***. To manipulate the interested methods, users should override the template instrumentation gadgets and register them to hook the interested methods. During runtime, when those methods are invoked, the control flow is diverted to the gadgets. And it is the timing to manipulate the boxed method input arguments and return value. In the current stage, ProbeDroid targets on Android 5.0 and above. To build ProbeDroid kit, users just pull the package from GitHub and follow the build commands. Android source tree is not required.  
 
 ## **Feature**  
-+  Dynamic Java method instrumentation kit for Android app  
-   +  Java library as integration interface for users  
-   +  ***Customizable instrumentation gadgets*** to fit different analysis purposes  
-   +  ***Modifiable method input and output*** to change app behavior  
-+  Direct build process ***without Android source dependency***  
-   +  Pulling the GitHub source and following the document  
-+  Succinct deployment ***without customized ROM or system apps***  
-   +  Only ProbeDroid engine and users' instrumentation tools are required  
++  Programmable instrumentation
+   +  Code your own instrument tools with ***Java practice***
+   +  Flexible APIs for you to
+      +  Hook interested library or app defined methods
+      +  Customize instrument gadgets for different analysis purposes
+      +  Modify method in/output to hack app at runtime
++  Succinct deployment
+   +  Only ProbeDroid engine and instrument tools are required
+   +  No need to customize Android framework
+
+
+## **[Design Memo]**
+
 
 ## **Limitation**  
 +  Cannot instrument ***native*** methods now (under development)  
@@ -56,5 +61,6 @@ All the source code are licensed under ***MIT***. See ***COPYING*** for details.
 Please contact me via the mail ***andy.zsshen@gmail.com***.  
 Note that the kit is still under construction.  Contribution and bug report is desired.  
 
+[Design Memo]:http://www.slideshare.net/ZongShenShen/probedroid-crafting-your-own-dynamic-instrument-tool-on-android-for-app-behavior-exploration
 [Source Building Wiki]:https://github.com/ZSShen/ProbeDroid/wiki/Road-Map
 [Play and Hack Wiki]:https://github.com/ZSShen/ProbeDroid/wiki/Road-Map
