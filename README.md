@@ -23,7 +23,7 @@ ProbeDroid is a ***dynamic Java code instrumentation kit for Android application
 
 #### ProbeDroid is still under construction. More features will be presented in the near feature. 
 
-<img src="https://github.com/ZSShen/ProbeDroid/blob/master/res/ProbeDroidOverview.png"/width="750px">
+<img src="https://raw.githubusercontent.com/ZSShen/ProbeDroid/master/res/ProbeDroidOverview.png" width="750px/">
 
 
 ## **Installation**
