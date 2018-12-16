@@ -1,6 +1,6 @@
 # **ProbeDroid**  
 
-ProbeDroid is a ***dynamic Java code instrumentation kit for Android application***. It provides APIs for users to craft their own instrumentation tools. Thus they can trace, profile, or change the runtime behavior of an interested application. Essentially, ***Java method*** is the ***basic instrumentation unit***. To manipulate the interested methods, users should override the template instrumentation gadgets and register them to hook the interested methods. During runtime, when those methods are invoked, the control flow is diverted to the gadgets. And it is the timing to manipulate the boxed method input arguments and return value. In the current stage, ProbeDroid targets on Android 5.0 and above. To build ProbeDroid kit, users just pull the package from GitHub and follow the build commands. Android source tree is not required.  
+ProbeDroid is a ***dynamic Java code instrumentation kit for Android application***, which provides APIs for users to craft their own instrumentation tools. As a result, users can trace, profile, or change the runtime behavior of an interested application. Essentially, ***Java method*** is the ***basic instrumentation unit***. To manipulate the interested methods, users should override the template instrumentation gadgets and register them to hook the interested methods. When the hooked methods are invoked during the runtime, the control flow is diverted to the gadgets. At that moment, users can manipulate the boxed method input arguments and the return value. In the current stage, ProbeDroid targets on Android 5.0 and above. To build ProbeDroid kit, users just pull the package from GitHub and follow the build commands. Android source tree is not required.  
 
 ## **Feature**  
 +  Programmable instrumentation
@@ -8,7 +8,7 @@ ProbeDroid is a ***dynamic Java code instrumentation kit for Android application
    +  Flexible APIs for you to
       +  Hook interested library or app defined methods
       +  Customize instrument gadgets for different analysis purposes
-      +  Modify method in/output to hack app at runtime
+      +  Modify method in/output to hack app during the runtime
 +  Succinct deployment
    +  Only ProbeDroid engine and instrument tools are required
    +  No need to customize Android framework
@@ -39,7 +39,7 @@ Please refer to [Play and Hack Wiki]
 
 | [![GoogleMaps](http://img.youtube.com/vi/6_kg-229yz4/hqdefault.jpg)](https://www.youtube.com/watch?v=6_kg-229yz4&nohtml5=False) |
 |---|
-| A simple instrumentation tool which ***tracks the strings converted from StringBuilder and StringBuffer object***. By taking some forensics towards the converted strings, you would notice that GoogleMaps applies Java reflection for some network authentication. Also, It will dynamically generate some C/C++ code and compile it for map rendering. |
+| A simple instrumentation tool which ***tracks the strings converted from StringBuilder and StringBuffer object***. By taking some forensics towards the converted strings, we can notice that GoogleMaps applies Java reflection for some network authentication. Also, It will dynamically generate some C/C++ code and compile it for map rendering. |
 
 
 #### **Instrument KKTix**
@@ -47,7 +47,7 @@ Please refer to [Play and Hack Wiki]
 
 | [![KKTix](http://img.youtube.com/vi/KV8gRs0xWQ8/hqdefault.jpg)](https://www.youtube.com/watch?v=KV8gRs0xWQ8) |
 |---|
-| A simple instrumentation tool which ***tracks the started Activities and Services***. By taking some forensics towards the tracked components, you would notice that KKTix applies several kinds of Activies to render the ticket booking pages. Also, it starts a  Service for background computation. |
+| A simple instrumentation tool which ***tracks the started Activities and Services***. By taking some forensics towards the tracked components, we can notice that KKTix applies several kinds of Activies to render the ticket booking pages. Also, it starts a Service for background computation. |
 
 ## **License**
 Except for the following source code:  
